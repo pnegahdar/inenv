@@ -25,7 +25,7 @@ Example Usage:
 Available params:
 
     {{ config_dir }} -- the directory of the config
-    {{ if:VAR }}somethign{{ endif }}
+    {{ if:VAR }}something{{ endif }} -- checks if VAR environment variable is set
 
 
 Config format:
@@ -52,3 +52,7 @@ Sample config:
             file:{{ config_dir }}/my/sub/dir/requirements.txt
 
 
+
+### Setup/Deveop ###
+
+Clone repo, run `make setup`, test with `make test`

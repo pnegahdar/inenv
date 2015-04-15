@@ -11,12 +11,24 @@
 from setuptools import setup, find_packages
 from inenv import __version__
 
+tests_require = [
+    'mock',
+    'nose',
+    'coverage',
+    'yanc',
+    'preggy',
+    'tox',
+    'ipdb',
+    'coveralls',
+    'sphinx',
+]
+
 setup(
     name='inenv',
     version=__version__,
-    description='Simple multi-enviornment management command and runner',
+    description='Simple multi virtualenv command runner',
     long_description='''
-Simple multi-enviornment management command and runner
+Simple multi virtualenv command runner
 ''',
     keywords='venv virtualenv python tox test multivenv',
     author='Parham Negahdar',
@@ -33,11 +45,14 @@ Simple multi-enviornment management command and runner
         'Operating System :: OS Independent',
     ],
     packages=find_packages(),
-    include_package_data=True,
+    include_package_data=False,
     install_requires=[
         # add your dependencies here
         # remember to use 'package-name>=x.y.z,<x.y+1.0' notation (this way you get bugfixes)
     ],
+    extras_require={
+        'tests': tests_require,
+    },
     entry_points={
         'console_scripts': [
             # add cli scripts here in this form:

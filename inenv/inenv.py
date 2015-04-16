@@ -3,8 +3,8 @@
 # Copyright (c) 2015, Parham Negahdar <pnegahdar@gmail.com>
 from collections import defaultdict
 import ConfigParser
+import hashlib
 import os
-from pip.req import InstallRequirement
 import shutil
 import subprocess
 import sys
@@ -19,7 +19,6 @@ INI_PATH = None
 RECURSION_LIMIT = 100
 
 ### PATH STUFF
-
 def get_ini_path():
     """Walks up till it finds a inenv.ini"""
     global INI_PATH
@@ -55,10 +54,6 @@ def rel_path_to_abs(path):
     return os.path.normpath(os.path.join(os.path.dirname(get_ini_path()), path))
 
 
-def get_meta_path():
-    return os.path.join(get_working_path(), 'meta.json')
-
-
 def get_venv_path(venv_name):
     return os.path.join(get_working_path(), venv_name)
 
@@ -68,6 +63,14 @@ def get_execfile_path(venv_name):
 
 
 ### Venv Stuff
+
+def subprocess_call(cmd_args):
+    proc = subprocess.Popen(' '.join(cmd_args), stdin=sys.stdin, stdout=sys.stdout,
+                            stderr=sys.stderr, shell=True)
+    retcode = proc.wait()
+    if retcode != 0:
+        exit_with_err('Runtime Error')
+
 
 def extract_ini_section(parser, section):
     section_parts = section.split(":")
@@ -88,7 +91,9 @@ def extract_ini_section(parser, section):
         storage = parser.get(section, 'env_storage')
         if not os.access(os.path.abspath(storage), os.W_OK):
             exit_with_err(
-                "The env_storage provided is not a directory or doesn't have write permissions")
+                "INI Parse Error: The env_storage for {} provided is not a directory or doesn't "
+                "have write permissions".format(
+                    section))
         data['env_stoarge'] = storage
     except ConfigParser.NoOptionError:
         pass
@@ -118,19 +123,36 @@ def venv_exists(venv_name):
     return os.path.isfile(exec_path)
 
 
+def create_venv(venv_name):
+    create_environment(get_venv_path(venv_name))
+
+
 def delete_venv(venv_name):
     shutil.rmtree(get_venv_path(venv_name))
+
+
+def file_md5(path):
+    """Temporary until pip file parsing is done"""
+    hashlib.md5(open(path, 'rb').read()).hexdigest()
 
 
 def setup_venv(venv_name):
     """Main venv functionality entry point, run before doing things"""
     ini_path = get_ini_path()
     if not venv_exists(venv_name):
-        create_environment()
+        create_venv(venv_name)
     activate_venv(venv_name)
     parsed = parse_ini(ini_path).get(venv_name)
     if not parsed:
         exit_with_err("Unable to find venv {} in ini {}".format(venv_name, ini_path))
+    deps = parsed.get('deps', [])
+    for dep in deps:
+        print "Installing {}".format(dep)
+        if dep.startswith('file:'):
+            dep = rel_path_to_abs(dep.split('file:')[1])
+            subprocess_call(['pip', 'install', '-r', dep])
+        else:
+            subprocess_call(['pip', 'install', dep])
 
 
 def activate_venv(venv_name):
@@ -143,9 +165,7 @@ def activate_venv(venv_name):
 
 def run_in_venv(venv_name, cmd_args):
     setup_venv(venv_name)
-    proc = subprocess.Popen(' '.join(cmd_args), stdin=sys.stdin, stdout=sys.stdout,
-                            stderr=sys.stderr, shell=True)
-    proc.wait()
+    subprocess_call(cmd_args)
 
 
 def exit_with_err(msg):
@@ -163,10 +183,6 @@ def main_cli():
 @click.argument('venv_name', nargs=1)
 @click.argument('cmd', nargs=-1)
 def run(venv_name, cmd):
-    venv_path = venv_exists(venv_name)
-    if not venv_path:
-        click.echo('The venv does not exists at {}'.format(get_venv_path(venv_name)), err=True)
-        sys.exit(1)
     setup_venv(venv_name)
     run_in_venv(venv_name, cmd)
 

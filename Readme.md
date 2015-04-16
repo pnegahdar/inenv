@@ -25,7 +25,6 @@ Example Usage:
 Config format:
 
     [envname:<env_var_conditional>]
-    env_storage: /workspace/ # Path to store the venv, defaults to .inenv/ where the ini is.
     deps: (file:)<deplist>, more deps...
 
 
@@ -36,8 +35,8 @@ Sample config:
     deps: scipy==1.2.1, file:requirements.txt # Relative paths are from the position of the ini file
 
     [app1:jenkins] # Only used in bool(os.getenv('jenkins')) == True
-    env_storage: ~/workspace/
-
+    deps: scipy==1.4
+    
     [app2]
     deps: file:my/sub/dir/requirements.txt
 

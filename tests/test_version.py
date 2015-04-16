@@ -10,7 +10,7 @@
 
 from preggy import expect
 
-from inenv import __version__
+from inenv.version import __version__
 from tests.base import TestCase
 
 

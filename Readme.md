@@ -1,6 +1,6 @@
 # InEnv #
 
-A simple utility to manage multiple virtual python environments in one project. Functionally similar to tox but makes no assumption assumptions on what you want to use it for (tests, etc).
+A simple utility to manage multiple virtual python environments in one project. Functionally similar to tox but makes no assumption what you want to use it for (tests, etc).
 
 Changes are automatically detected in files and deps and are only reinstalled if changes occur
 
@@ -9,7 +9,7 @@ Changes are automatically detected in files and deps and are only reinstalled if
 Basic usage:
 
     inenv run <envname> <any subprocess command>
-    inenv recreate <project>
+    inenv clean <project>
 
 Example Usage:
 
@@ -22,34 +22,24 @@ Example Usage:
 
 ### Config File ###
 
-Available params:
-
-    {{ config_dir }} -- the directory of the config
-    {{ if:VAR }}something{{ endif }} -- checks if VAR environment variable is set
-
-
 Config format:
 
-    env_storage: <default {{ config_dir }}/.inenv>
-    [envname]
-        deps:
-            (file:)<deplist>
-
+    [envname:<env_var_conditional>]
+    env_storage: /workspace/ # Path to store the venv, defaults to .inenv/ where the ini is.
+    deps: (file:)<deplist>, more deps...
 
 
 
 Sample config:
 
-    {{ if:IS_JENKINS }}
-    env_storage: ~/workspace/
-    {{ endif }}
     [app1]
-        deps:
-            scipy==1.2.4
-            file:requirements.txt
+    deps: scipy==1.2.1, file:requirements.txt # Relative paths are from the position of the ini file
+
+    [app1:jenkins] # Only used in bool(os.getenv('jenkins')) == True
+    env_storage: ~/workspace/
+
     [app2]
-        deps:
-            file:{{ config_dir }}/my/sub/dir/requirements.txt
+    deps: file:my/sub/dir/requirements.txt
 
 
 

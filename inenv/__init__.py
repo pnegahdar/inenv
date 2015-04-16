@@ -8,4 +8,4 @@
 # http://www.opensource.org/licenses/MIT-license
 # Copyright (c) 2015, Parham Negahdar <pnegahdar@gmail.com>
 
-from inenv.version import __version__  # NOQA
+# from inenv.version import __version__  # NOQA

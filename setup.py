@@ -9,7 +9,7 @@
 # Copyright (c) 2015, Parham Negahdar <pnegahdar@gmail.com>
 
 from setuptools import setup, find_packages
-from inenv import __version__
+from inenv.version import __version__
 
 tests_require = [
     'mock',

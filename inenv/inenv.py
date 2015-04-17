@@ -173,14 +173,14 @@ def exit_with_err(msg):
     sys.exit(1)
 
 
-def sub_shell():
-    shell = os.getenv('SHELL')
-    print shell
-    shell = '/bin/bash'
-    os.execv(shell, ['-l'])
-    # proc = subprocess.Popen(shell, stdin=sys.stdin, stdout=sys.stdout,
-    #                          stderr=sys.stderr, shell=True, executable=shell)
-    # proc.wait()
+# def sub_shell():
+#     shell = os.getenv('SHELL')
+#     print shell
+#     shell = '/bin/bash'
+#     os.execv(shell, ['-l'])
+#     # proc = subprocess.Popen(shell, stdin=sys.stdin, stdout=sys.stdout,
+#     #                          stderr=sys.stderr, shell=True, executable=shell)
+#     # proc.wait()
 
 
 ### CLI
@@ -197,12 +197,12 @@ def run(venv_name, cmd):
     run_in_venv(venv_name, cmd)
 
 
-@main_cli.command()
-@click.argument('venv_name')
-def switch(venv_name):
-    setup_venv(venv_name)
-    activate_venv(venv_name)
-    sub_shell()
+# @main_cli.command()
+# @click.argument('venv_name')
+# def switch(venv_name):
+#     setup_venv(venv_name)
+#     activate_venv(venv_name)
+#     sub_shell()
 
 @main_cli.command()
 @click.argument('venv_name')

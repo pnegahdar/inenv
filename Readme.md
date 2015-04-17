@@ -6,7 +6,7 @@ Changes are automatically detected in files and deps and are only reinstalled if
 
 ### Install ###
 
-   pip install inenv
+    pip install inenv
 
 ### Usage ###
 

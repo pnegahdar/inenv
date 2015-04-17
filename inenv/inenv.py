@@ -210,10 +210,9 @@ def clean(venv_name):
     venv_path = venv_exists(venv_name)
     if not venv_path:
         exit_with_err('The venv does not exists at {}'.format(get_venv_path(venv_name)))
-    run = click.confirm('Going to delete {}'.format(venv_path))
+    run = click.confirm('Going to delete {} venv'.format(venv_name))
     if run:
         delete_venv(venv_name)
-        setup_venv(venv_name)
 
 
 if __name__ == '__main__':

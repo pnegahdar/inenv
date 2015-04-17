@@ -49,6 +49,8 @@ Simple multi virtualenv command runner
     install_requires=[
         # add your dependencies here
         # remember to use 'package-name>=x.y.z,<x.y+1.0' notation (this way you get bugfixes)
+        'click==4.0',
+        'virtualenv==12.1.1'
     ],
     extras_require={
         'tests': tests_require,
@@ -56,7 +58,7 @@ Simple multi virtualenv command runner
     entry_points={
         'console_scripts': [
             # add cli scripts here in this form:
-            # 'inenv=inenv.cli:main',
+            'inenv=inenv:main_cli',
         ],
     },
 )

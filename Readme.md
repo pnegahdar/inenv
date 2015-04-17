@@ -4,6 +4,10 @@ A simple utility to manage multiple virtual python environments in one project. 
 
 Changes are automatically detected in files and deps and are only reinstalled if changes occur
 
+### Install ###
+
+   pip install inenv
+
 ### Usage ###
 
 Basic usage:

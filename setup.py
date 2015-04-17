@@ -58,7 +58,7 @@ Simple multi virtualenv command runner
     entry_points={
         'console_scripts': [
             # add cli scripts here in this form:
-            'inenv=inenv:main_cli',
+            'inenv=inenv.inenv:main_cli',
         ],
     },
 )

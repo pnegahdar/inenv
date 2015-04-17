@@ -164,7 +164,6 @@ def activate_venv(venv_name):
 
 
 def run_in_venv(venv_name, cmd_args):
-    setup_venv(venv_name)
     subprocess_call(cmd_args)
 
 
@@ -174,7 +173,7 @@ def exit_with_err(msg):
 
 
 # def sub_shell():
-#     shell = os.getenv('SHELL')
+# shell = os.getenv('SHELL')
 #     print shell
 #     shell = '/bin/bash'
 #     os.execv(shell, ['-l'])

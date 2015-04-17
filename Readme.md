@@ -17,6 +17,8 @@ Example Usage:
 
     inenv run subproject nosetest
 
+    inenv run webproject -- python manage.py syncdb --hello # Use posix style -- to pass all args
+
 
 
 
@@ -36,7 +38,7 @@ Sample config:
 
     [app1:jenkins] # Only used in bool(os.getenv('jenkins')) == True
     deps: scipy==1.4
-    
+
     [app2]
     deps: file:my/sub/dir/requirements.txt
 

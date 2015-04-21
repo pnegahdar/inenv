@@ -2,7 +2,6 @@
 
 A simple utility to manage multiple virtual python environments in one project. Functionally similar to tox but makes no assumption what you want to use it for (tests, etc).
 
-Changes are automatically detected in files and deps and are only reinstalled if changes occur
 
 ### Install ###
 
@@ -12,8 +11,16 @@ Changes are automatically detected in files and deps and are only reinstalled if
 
 Basic usage:
 
-    inenv run <envname> <any subprocess command>
-    inenv clean <project>
+    Usage: inenv [OPTIONS] COMMAND [ARGS]...
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      clean  Deletes the given venv to start over
+      init   Sets up all the venvs for the project
+      irun   Runs a command in the env provided without prep (pip installs)
+      run    Runs a command in the env provided with prep (pip installs)
 
 Example Usage:
 

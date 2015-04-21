@@ -14,7 +14,7 @@ import click
 
 FILE_NAME = 'inenv.ini'
 
-ACTIVATED_VENV = None
+ORIGINAL_PATH = None
 INI_PATH = None
 RECURSION_LIMIT = 100
 
@@ -156,15 +156,12 @@ def setup_venv(venv_name):
 
 
 def activate_venv(venv_name):
-    global ACTIVATED_VENV
-    if not ACTIVATED_VENV:
-        exec_file_path = get_execfile_path(venv_name)
-        execfile(exec_file_path, dict(__file__=exec_file_path))
-        ACTIVATED_VENV = exec_file_path
-
-
-def run_in_venv(venv_name, cmd_args):
-    subprocess_call(cmd_args)
+    global ORIGINAL_PATH
+    if not ORIGINAL_PATH:
+        ORIGINAL_PATH = sys.path
+    sys.path = ORIGINAL_PATH
+    exec_file_path = get_execfile_path(venv_name)
+    execfile(exec_file_path, dict(__file__=exec_file_path))
 
 
 def exit_with_err(msg):
@@ -172,14 +169,15 @@ def exit_with_err(msg):
     sys.exit(1)
 
 
-# def sub_shell():
-# shell = os.getenv('SHELL')
-#     print shell
-#     shell = '/bin/bash'
-#     os.execv(shell, ['-l'])
-#     # proc = subprocess.Popen(shell, stdin=sys.stdin, stdout=sys.stdout,
-#     #                          stderr=sys.stderr, shell=True, executable=shell)
-#     # proc.wait()
+def sub_shell():
+    shell = os.getenv('SHELL')
+    args = ['-l']
+    if 'zsh' in shell:
+        args.append('-f')
+    os.execv(shell, args)
+    # proc = subprocess.Popen(shell, stdin=sys.stdin, stdout=sys.stdout,
+    # stderr=sys.stderr, shell=True, executable=shell)
+    # proc.wait()
 
 
 ### CLI
@@ -192,20 +190,42 @@ def main_cli():
 @click.argument('venv_name', nargs=1)
 @click.argument('cmd', nargs=-1)
 def run(venv_name, cmd):
+    """Runs a command in the env provided with prep (does the pip installs before running)"""
     setup_venv(venv_name)
-    run_in_venv(venv_name, cmd)
+    subprocess_call(cmd)
 
 
-# @main_cli.command()
-# @click.argument('venv_name')
-# def switch(venv_name):
-#     setup_venv(venv_name)
-#     activate_venv(venv_name)
-#     sub_shell()
+@main_cli.command()
+@click.argument('venv_name', nargs=1)
+@click.argument('cmd', nargs=-1)
+def irun(venv_name, cmd):
+    """Runs a command in the env provided without prep (no pip installs)"""
+    activate_venv(venv_name)
+    subprocess_call(cmd)
+
+
+@main_cli.command()
+@click.argument('venv_name')
+def path(venv_name):
+    global ORIGINAL_PATH
+    NEW_PATH = list(set(ORIGINAL_PATH) - set(sys.path))
+    activate_venv(venv_name)
+    sys.stdout.write("export PATH={}:$PATH\n".format(':'.join(NEW_PATH)))
+    # sub_shell()
+
+
+@main_cli.command()
+def init():
+    """Sets up all the venvs for the project"""
+    ini_path = get_ini_path()
+    venvs = parse_ini(ini_path).keys()
+    map(setup_venv, venvs)
+
 
 @main_cli.command()
 @click.argument('venv_name')
 def clean(venv_name):
+    """Deletes the given venv to start over"""
     venv_path = venv_exists(venv_name)
     if not venv_path:
         exit_with_err('The venv does not exists at {}'.format(get_venv_path(venv_name)))

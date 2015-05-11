@@ -12,6 +12,8 @@ import sys
 from virtualenv import create_environment
 import click
 
+import version
+
 FILE_NAME = 'inenv.ini'
 
 ORIGINAL_PATH = None
@@ -182,6 +184,7 @@ def sub_shell():
 
 ### CLI
 @click.group()
+@click.version_option(version.__version__)
 def main_cli():
     pass
 

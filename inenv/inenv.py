@@ -14,6 +14,7 @@ import click
 
 import version
 
+
 FILE_NAME = 'inenv.ini'
 
 ORIGINAL_PATH = None
@@ -21,7 +22,7 @@ INI_PATH = None
 RECURSION_LIMIT = 100
 
 INENV_NAME = 'inenv'
-INENV_HELPER_NAME = 'inenv_helper'
+INENV_HELPER_NAME = 'inenv_switch'
 
 
 ### PATH STUFF
@@ -67,9 +68,6 @@ def get_venv_path(venv_name):
 def get_execfile_path(venv_name):
     return os.path.join(get_venv_path(venv_name), 'bin/activate_this.py')
 
-
-def get_bin_path(venv_name):
-    return os.path.join(get_venv_path(venv_name), 'bin/')
 
 ### Venv Stuff
 
@@ -189,26 +187,17 @@ def sub_shell():
     # proc.wait()
 
 
-### CLI
-def was_helper_called():
-    helper_called = sys.argv[0].split('/')[-1] == INENV_HELPER_NAME
-    if helper_called:
-        sys.stdout.write("{} {}\n".format(INENV_NAME, ' '.join(sys.argv[1:])))
-    return helper_called
-
 @click.group()
 @click.version_option(version.__version__)
 def main_cli():
     pass
+
 
 @main_cli.command()
 @click.argument('venv_name', nargs=1)
 @click.argument('cmd', nargs=-1)
 def run(venv_name, cmd):
     """Runs a command in the env provided with prep (does the pip installs before running)"""
-    if was_helper_called():
-        return
-
     setup_venv(venv_name)
     subprocess_call(cmd)
 
@@ -218,62 +207,31 @@ def run(venv_name, cmd):
 @click.argument('cmd', nargs=-1)
 def irun(venv_name, cmd):
     """Runs a command in the env provided without prep (no pip installs)"""
-    if was_helper_called():
-        return
-
     activate_venv(venv_name)
     subprocess_call(cmd)
 
-    
-@main_cli.command()
+
+@click.command()
 @click.argument('venv_name', nargs=1)
 def switch(venv_name):
     """Switch to a different virtual env"""
+    SHELL = os.getenv('SHELL')
+    to_run = ""
+    if not venv_exists(venv_name):
+        to_run += "inenv init {}\n".format(venv_name)
 
-    if sys.argv[0].split('/')[-1] != INENV_HELPER_NAME:
-        setup_venv(venv_name)
-        return
-    
-    # get $PATH and split it
-    paths = os.getenv('PATH').split(':')
-    
-    # remove all .inenv directories from $PATH
-    no_inenv_paths = filter(lambda x: ".inenv" not in x, paths)
-    
-    # get the bin's path
-    bin_path = get_bin_path(venv_name)    
-    
-    # add the bin's path to $PATH
-    no_inenv_paths.insert(0, bin_path)
-    new_path = ':'.join(no_inenv_paths)
-    
-    # print the path out
-    sys.stdout.write("export PATH={}\n".format(new_path))
-    
-    # run the command again
-    sys.stdout.write("{} {}\n".format(INENV_NAME, ' '.join(sys.argv[1:])))
-    return
-
-
-@main_cli.command()
-@click.argument('venv_name')
-def path(venv_name):
-    if was_helper_called():
-        return
-
-    global ORIGINAL_PATH
-    NEW_PATH = list(set(ORIGINAL_PATH) - set(sys.path))
-    activate_venv(venv_name)
-    sys.stdout.write("export PATH={}:$PATH\n".format(':'.join(NEW_PATH)))
-    # sub_shell()
+    to_source = os.path.join(get_venv_path(venv_name), 'bin/activate')
+    if any([shell in SHELL for shell in ['bash', 'zsh']]):
+        source_cmd = 'source'
+    else:
+        source_cmd = '.'
+    to_run += "{source_cmd} {rest}".format(source_cmd=source_cmd, rest=to_source)
+    sys.stdout.write(to_run)
 
 
 @main_cli.command()
 def init():
     """Sets up all the venvs for the project"""
-    if was_helper_called():
-        return
-
     ini_path = get_ini_path()
     venvs = parse_ini(ini_path).keys()
     map(setup_venv, venvs)
@@ -283,9 +241,6 @@ def init():
 @click.argument('venv_name')
 def clean(venv_name):
     """Deletes the given venv to start over"""
-    if was_helper_called():
-        return
-
     venv_path = venv_exists(venv_name)
     if not venv_path:
         exit_with_err('The venv does not exists at {}'.format(get_venv_path(venv_name)))

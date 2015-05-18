@@ -187,30 +187,6 @@ def sub_shell():
     # proc.wait()
 
 
-@click.group()
-@click.version_option(version.__version__)
-def main_cli():
-    pass
-
-
-@main_cli.command()
-@click.argument('venv_name', nargs=1)
-@click.argument('cmd', nargs=-1)
-def run(venv_name, cmd):
-    """Runs a command in the env provided with prep (does the pip installs before running)"""
-    setup_venv(venv_name)
-    subprocess_call(cmd)
-
-
-@main_cli.command()
-@click.argument('venv_name', nargs=1)
-@click.argument('cmd', nargs=-1)
-def irun(venv_name, cmd):
-    """Runs a command in the env provided without prep (no pip installs)"""
-    activate_venv(venv_name)
-    subprocess_call(cmd)
-
-
 @click.command()
 @click.argument('venv_name', nargs=1)
 def switch(venv_name):
@@ -229,12 +205,9 @@ def switch(venv_name):
     sys.stdout.write(to_run)
 
 
-@main_cli.command()
-@click.argument('venv_names', nargs=-1)
 def init(venv_names):
     """Sets up all the venvs for the project"""
     ini_path = get_ini_path()
-    print venv_names
     if venv_names:
         venvs = venv_names
     else:
@@ -242,8 +215,6 @@ def init(venv_names):
     map(setup_venv, venvs)
 
 
-@main_cli.command()
-@click.argument('venv_name')
 def clean(venv_name):
     """Deletes the given venv to start over"""
     venv_path = venv_exists(venv_name)
@@ -253,7 +224,42 @@ def clean(venv_name):
     if run:
         delete_venv(venv_name)
 
+def run(venv_name, cmd, nobuild):
+    """Runs a command in the env provided"""
+    print venv_name
+    print cmd
+    print nobuild
+    if nobuild:
+        activate_venv(venv_name)
+    else:
+        setup_venv(venv_name)
+    subprocess_call(cmd)
 
-if __name__ == '__main__':
-    main_cli()
+        
+@click.command()
+@click.version_option(version.__version__)
+@click.option('-v', '--verbose', count=True)
+@click.option('-n', '--nobuild', count=True)
+@click.argument('cmdargs', nargs=-1)
+def main_cli(cmdargs, verbose, nobuild):
+    # TODO process opts: verbose and quiet
+    # TODO make sure switch works
+    if not cmdargs:
+        exit_with_err('Please supply arguments.')
+        return
 
+    cmd = cmdargs[0]
+    args = cmdargs[1:]
+    if cmd == 'init':
+        init(args)
+        return
+    elif cmd == 'clean':
+        map(clean, args)
+        return
+    
+    if len(args) == 1:
+        switch(args)
+        return
+    
+    run(cmd, args, nobuild == 1)
+    

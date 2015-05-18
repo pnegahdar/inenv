@@ -230,10 +230,15 @@ def switch(venv_name):
 
 
 @main_cli.command()
-def init():
+@click.argument('venv_names', nargs=-1)
+def init(venv_names):
     """Sets up all the venvs for the project"""
     ini_path = get_ini_path()
-    venvs = parse_ini(ini_path).keys()
+    print venv_names
+    if venv_names:
+        venvs = venv_names
+    else:
+        venvs = parse_ini(ini_path).keys()
     map(setup_venv, venvs)
 
 

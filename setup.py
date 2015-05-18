@@ -59,6 +59,7 @@ Simple multi virtualenv command runner
         'console_scripts': [
             # add cli scripts here in this form:
             'inenv=inenv.inenv:main_cli',
+            'inenv_helper=inenv.inenv:main_cli',
         ],
     },
 )

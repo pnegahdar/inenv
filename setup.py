@@ -10,7 +10,6 @@
 
 from setuptools import setup, find_packages
 from inenv.version import __version__
-from inenv.inenv import INENV_HELPER_NAME
 
 tests_require = [
     'mock',
@@ -60,7 +59,7 @@ Simple multi virtualenv command runner
         'console_scripts': [
             # add cli scripts here in this form:
             'inenv=inenv.inenv:main_cli',
-            '{}=inenv.inenv:switch'.format(INENV_HELPER_NAME),
+            'inenv_helper=inenv.inenv:main_cli',
         ],
     },
 )

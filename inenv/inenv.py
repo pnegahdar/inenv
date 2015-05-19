@@ -16,13 +16,11 @@ import version
 
 
 FILE_NAME = 'inenv.ini'
+ACTIVATE_FILE_NAME = 'activate.sh'
 
 ORIGINAL_PATH = None
 INI_PATH = None
 RECURSION_LIMIT = 100
-
-INENV_NAME = 'inenv'
-INENV_HELPER_NAME = 'inenv_switch'
 
 
 ### PATH STUFF
@@ -186,11 +184,51 @@ def sub_shell():
     # stderr=sys.stderr, shell=True, executable=shell)
     # proc.wait()
 
+def init(venv_names):
+    """Sets up all the venvs for the project"""
+    ini_path = get_ini_path()
+    if venv_names:
+        venvs = venv_names
+    else:
+        venvs = parse_ini(ini_path).keys()
+    map(setup_venv, venvs)
 
+    # Write activate scripts
+    activate_template = '''
+function inenv() {
+    `inenv_helper should_eval $@` && `inenv_helper $@` || inenv_helper $@
+}
+'''
+
+    activate_file = os.path.join(get_venv_path(get_working_path()), 'activate.sh')
+    with open(activate_file, "w") as activate_template_file:
+        activate_template_file.write(activate_template)
+    
+    sys.stdout.write("\nPlease source the following script in your rc file:\n{}\n".format(activate_file))
+
+def clean(venv_name):
+    """Deletes the given venv to start over"""
+    venv_path = venv_exists(venv_name)
+    if not venv_path:
+        exit_with_err('The venv does not exists at {}'.format(get_venv_path(venv_name)))
+    run = click.confirm('Going to delete {} venv'.format(venv_name))
+    if run:
+        delete_venv(venv_name)
+
+def run(venv_name, cmd, nobuild):
+    """Runs a command in the env provided"""
+    if nobuild:
+        activate_venv(venv_name)
+    else:
+        setup_venv(venv_name)
+    subprocess_call(cmd)
+
+    
 @click.command()
 @click.argument('venv_name', nargs=1)
 def switch(venv_name):
     """Switch to a different virtual env"""
+    
     SHELL = os.getenv('SHELL')
     to_run = ""
     if not venv_exists(venv_name):
@@ -204,38 +242,7 @@ def switch(venv_name):
     to_run += "{source_cmd} {rest}".format(source_cmd=source_cmd, rest=to_source)
     sys.stdout.write(to_run)
 
-
-def init(venv_names):
-    """Sets up all the venvs for the project"""
-    ini_path = get_ini_path()
-    if venv_names:
-        venvs = venv_names
-    else:
-        venvs = parse_ini(ini_path).keys()
-    map(setup_venv, venvs)
-
-
-def clean(venv_name):
-    """Deletes the given venv to start over"""
-    venv_path = venv_exists(venv_name)
-    if not venv_path:
-        exit_with_err('The venv does not exists at {}'.format(get_venv_path(venv_name)))
-    run = click.confirm('Going to delete {} venv'.format(venv_name))
-    if run:
-        delete_venv(venv_name)
-
-def run(venv_name, cmd, nobuild):
-    """Runs a command in the env provided"""
-    print venv_name
-    print cmd
-    print nobuild
-    if nobuild:
-        activate_venv(venv_name)
-    else:
-        setup_venv(venv_name)
-    subprocess_call(cmd)
-
-        
+    
 @click.command()
 @click.version_option(version.__version__)
 @click.option('-v', '--verbose', count=True)
@@ -243,23 +250,36 @@ def run(venv_name, cmd, nobuild):
 @click.argument('cmdargs', nargs=-1)
 def main_cli(cmdargs, verbose, nobuild):
     # TODO process opts: verbose and quiet
-    # TODO make sure switch works
     if not cmdargs:
         exit_with_err('Please supply arguments.')
         return
 
+    valid_cmds = ['init', 'clean']
+    
     cmd = cmdargs[0]
     args = cmdargs[1:]
+
+    # Check if stdout of command needs to be evaluated in shell
+    if cmd == 'should_eval':
+        subcmd = args[0]
+        subargs = args[1:]
+        if not subargs and subcmd not in valid_cmds:
+            sys.exit(0)        
+        sys.exit(1)
+
     if cmd == 'init':
         init(args)
         return
     elif cmd == 'clean':
         map(clean, args)
         return
-    
-    if len(args) == 1:
-        switch(args)
+
+    if not args:
+        switch(cmd)
         return
     
     run(cmd, args, nobuild == 1)
     
+
+if __name__ == "__main__":
+    main_cli()

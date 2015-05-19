@@ -16,13 +16,11 @@ import version
 
 
 FILE_NAME = 'inenv.ini'
-ACTIVATE_FILE_NAME = 'activate.sh'
+ACTIVATE_FILE_NAME = 'inenv.sh'
 
 ORIGINAL_PATH = None
 INI_PATH = None
 RECURSION_LIMIT = 100
-
-VERBOSE_MODE = False
 
 
 ### PATH STUFF
@@ -71,11 +69,9 @@ def get_execfile_path(venv_name):
 
 ### Venv Stuff
 
-def subprocess_call(cmd_args):
-    global VERBOSE_MODE
-
+def subprocess_call(cmd_args, verbose):
     output = sys.stdout
-    if not VERBOSE_MODE:
+    if not verbose:
         output = subprocess.PIPE
     
     proc = subprocess.Popen(' '.join(cmd_args), stdin=sys.stdin, stdout=output,
@@ -149,7 +145,7 @@ def file_md5(path):
     hashlib.md5(open(path, 'rb').read()).hexdigest()
 
 
-def setup_venv(venv_name):
+def setup_venv(venv_name, verbose):
     """Main venv functionality entry point, run before doing things"""
     ini_path = get_ini_path()
     if not venv_exists(venv_name):
@@ -163,12 +159,16 @@ def setup_venv(venv_name):
         print "Installing {}".format(dep)
         if dep.startswith('file:'):
             dep = rel_path_to_abs(dep.split('file:')[1])
-            subprocess_call(['pip', 'install', '-r', dep])
+            subprocess_call(['pip', 'install', '-r', dep], verbose)
         else:
-            subprocess_call(['pip', 'install', dep])
+            subprocess_call(['pip', 'install', dep], verbose)
 
 
 def activate_venv(venv_name):
+    if not venv_exists(venv_name):
+        exit_with_err("Cannot activate venv {} because it does not exist".format(venv_name))
+        return
+    
     global ORIGINAL_PATH
     if not ORIGINAL_PATH:
         ORIGINAL_PATH = sys.path
@@ -193,14 +193,14 @@ def sub_shell():
     # proc.wait()
 
     
-def init(venv_names):
+def init(venv_names, verbose):
     """Sets up all the venvs for the project"""
     ini_path = get_ini_path()
     if venv_names:
         venvs = venv_names
     else:
         venvs = parse_ini(ini_path).keys()
-    map(setup_venv, venvs)
+    map(lambda x: setup_venv(x, verbose), venvs)
 
     # Write activate scripts
     activate_template = '''
@@ -209,7 +209,7 @@ function inenv() {
 }
 '''
 
-    activate_file = os.path.join(get_venv_path(get_working_path()), 'activate.sh')
+    activate_file = os.path.join(get_venv_path(get_working_path()), ACTIVATE_FILE_NAME)
     with open(activate_file, "w") as activate_template_file:
         activate_template_file.write(activate_template)
     
@@ -224,13 +224,13 @@ def clean(venv_name):
     if run:
         delete_venv(venv_name)
 
-def run(venv_name, cmd, nobuild):
+def run(venv_name, cmd, nobuild, verbose):
     """Runs a command in the env provided"""
     if nobuild:
         activate_venv(venv_name)
     else:
-        setup_venv(venv_name)
-    subprocess_call(cmd)
+        setup_venv(venv_name, verbose)
+    subprocess_call(cmd, verbose)
 
 
 def switch(venv_name):
@@ -256,11 +256,6 @@ def switch(venv_name):
 @click.option('-n', '--nobuild', count=True)
 @click.argument('cmdargs', nargs=-1)
 def main_cli(cmdargs, verbose, nobuild):
-    global VERBOSE_MODE
-    VERBOSE_MODE = (verbose > 0)
-    
-    # TODO process opts: verbose and quiet
-    # TODO verify venv_name is not a command
     if not cmdargs:
         exit_with_err('Please supply arguments.')
         return
@@ -279,7 +274,7 @@ def main_cli(cmdargs, verbose, nobuild):
         sys.exit(1)
 
     if cmd == 'init':
-        init(args)
+        init(args, verbose > 0)
         return
     elif cmd == 'clean':
         map(clean, args)
@@ -289,7 +284,7 @@ def main_cli(cmdargs, verbose, nobuild):
         switch(cmd)
         return
 
-    run(cmd, args, nobuild > 0)
+    run(cmd, args, nobuild > 0, verbose > 0)
     
 
 if __name__ == "__main__":

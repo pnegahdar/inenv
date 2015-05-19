@@ -145,7 +145,7 @@ def file_md5(path):
     hashlib.md5(open(path, 'rb').read()).hexdigest()
 
 
-def setup_venv(venv_name, verbose):
+def setup_venv(venv_name, verbose, quiet):
     """Main venv functionality entry point, run before doing things"""
     ini_path = get_ini_path()
     if not venv_exists(venv_name):
@@ -156,7 +156,8 @@ def setup_venv(venv_name, verbose):
         exit_with_err("Unable to find venv {} in ini {}".format(venv_name, ini_path))
     deps = parsed.get('deps', [])
     for dep in deps:
-        print "Installing {}".format(dep)
+        if not quiet:
+            sys.stdout.write("Installing {}".format(dep))
         if dep.startswith('file:'):
             dep = rel_path_to_abs(dep.split('file:')[1])
             subprocess_call(['pip', 'install', '-r', dep], verbose)
@@ -193,14 +194,14 @@ def sub_shell():
     # proc.wait()
 
     
-def init(venv_names, verbose):
+def init(venv_names, verbose, quiet):
     """Sets up all the venvs for the project"""
     ini_path = get_ini_path()
     if venv_names:
         venvs = venv_names
     else:
         venvs = parse_ini(ini_path).keys()
-    map(lambda x: setup_venv(x, verbose), venvs)
+    map(lambda x: setup_venv(x, verbose, quiet), venvs)
 
     # Write activate scripts
     activate_template = '''
@@ -212,8 +213,9 @@ function inenv() {
     activate_file = os.path.join(get_venv_path(get_working_path()), ACTIVATE_FILE_NAME)
     with open(activate_file, "w") as activate_template_file:
         activate_template_file.write(activate_template)
-    
-    sys.stdout.write("\nPlease source the following script in your rc file:\n{}\n".format(activate_file))
+
+    if not quiet:
+        sys.stdout.write("\nPlease source the following script in your rc file:\n{}\n".format(activate_file))
 
 def clean(venv_name):
     """Deletes the given venv to start over"""
@@ -224,12 +226,12 @@ def clean(venv_name):
     if run:
         delete_venv(venv_name)
 
-def run(venv_name, cmd, nobuild, verbose):
+def run(venv_name, cmd, nobuild, verbose, quiet):
     """Runs a command in the env provided"""
     if nobuild:
         activate_venv(venv_name)
     else:
-        setup_venv(venv_name, verbose)
+        setup_venv(venv_name, verbose, quiet)
     subprocess_call(cmd, True)
 
 
@@ -262,8 +264,9 @@ See list of sub-commands.
 
 Options:
   --help, -h: Print the help message and exit
-  --nobuild, -n: Does not install packages
+  --quiet, -q: Does not print anything to stdout.
   --verbose, -v: Prints output of installations
+  --nobuild, -n: Does not install packages
 
 Sub-commands:
   init ENV_NAME_1 ENV_NAME_2 Etc.:
@@ -281,9 +284,10 @@ Sub-commands:
 @click.version_option(version.__version__)
 @click.option('-v', '--verbose', count=True)
 @click.option('-n', '--nobuild', count=True)
+@click.option('-q', '--quiet', count=True)
 @click.option('-h', '--help', count=True)
 @click.argument('cmdargs', nargs=-1)
-def main_cli(cmdargs, verbose, nobuild, help):
+def main_cli(cmdargs, verbose, nobuild, quiet, help):
     if not cmdargs:
         if not help:
             # No arguments passed, exit with error
@@ -320,7 +324,7 @@ def main_cli(cmdargs, verbose, nobuild, help):
         sys.exit(1)
 
     if cmd == 'init':
-        init(args, verbose > 0)
+        init(args, verbose > 0, quiet > 0)
         return
     elif cmd == 'clean':
         map(clean, args)
@@ -330,7 +334,7 @@ def main_cli(cmdargs, verbose, nobuild, help):
         switch(cmd)
         return
 
-    run(cmd, args, nobuild > 0, verbose > 0)
+    run(cmd, args, nobuild > 0, verbose > 0, quiet > 0)
     
 
 if __name__ == "__main__":

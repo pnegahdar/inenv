@@ -23,8 +23,9 @@ See list of sub-commands.
 
 Options:
   --help, -h: Print the help message and exit
-  --nobuild, -n: Does not install packages
+  --quiet, -q: Does not print anything to stdout.
   --verbose, -v: Prints output of installations
+  --nobuild, -n: Does not install packages
 
 Sub-commands:
   init ENV_NAME_1 ENV_NAME_2 Etc.:

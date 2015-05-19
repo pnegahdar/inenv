@@ -22,6 +22,8 @@ ORIGINAL_PATH = None
 INI_PATH = None
 RECURSION_LIMIT = 100
 
+VERBOSE_MODE = False
+
 
 ### PATH STUFF
 def get_ini_path():
@@ -70,7 +72,13 @@ def get_execfile_path(venv_name):
 ### Venv Stuff
 
 def subprocess_call(cmd_args):
-    proc = subprocess.Popen(' '.join(cmd_args), stdin=sys.stdin, stdout=sys.stdout,
+    global VERBOSE_MODE
+
+    output = sys.stdout
+    if not VERBOSE_MODE:
+        output = subprocess.PIPE
+    
+    proc = subprocess.Popen(' '.join(cmd_args), stdin=sys.stdin, stdout=output,
                             stderr=sys.stderr, shell=True)
     retcode = proc.wait()
     if retcode != 0:
@@ -184,6 +192,7 @@ def sub_shell():
     # stderr=sys.stderr, shell=True, executable=shell)
     # proc.wait()
 
+    
 def init(venv_names):
     """Sets up all the venvs for the project"""
     ini_path = get_ini_path()
@@ -223,9 +232,7 @@ def run(venv_name, cmd, nobuild):
         setup_venv(venv_name)
     subprocess_call(cmd)
 
-    
-@click.command()
-@click.argument('venv_name', nargs=1)
+
 def switch(venv_name):
     """Switch to a different virtual env"""
     
@@ -249,7 +256,11 @@ def switch(venv_name):
 @click.option('-n', '--nobuild', count=True)
 @click.argument('cmdargs', nargs=-1)
 def main_cli(cmdargs, verbose, nobuild):
+    global VERBOSE_MODE
+    VERBOSE_MODE = (verbose > 0)
+    
     # TODO process opts: verbose and quiet
+    # TODO verify venv_name is not a command
     if not cmdargs:
         exit_with_err('Please supply arguments.')
         return
@@ -277,8 +288,8 @@ def main_cli(cmdargs, verbose, nobuild):
     if not args:
         switch(cmd)
         return
-    
-    run(cmd, args, nobuild == 1)
+
+    run(cmd, args, nobuild > 0)
     
 
 if __name__ == "__main__":

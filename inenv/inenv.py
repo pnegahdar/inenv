@@ -14,11 +14,14 @@ import click
 
 import version
 
+
 FILE_NAME = 'inenv.ini'
+ACTIVATE_FILE_NAME = 'inenv.sh'
 
 ORIGINAL_PATH = None
 INI_PATH = None
 RECURSION_LIMIT = 100
+
 
 ### PATH STUFF
 def get_ini_path():
@@ -66,8 +69,12 @@ def get_execfile_path(venv_name):
 
 ### Venv Stuff
 
-def subprocess_call(cmd_args):
-    proc = subprocess.Popen(' '.join(cmd_args), stdin=sys.stdin, stdout=sys.stdout,
+def subprocess_call(cmd_args, verbose):
+    output = sys.stdout
+    if not verbose:
+        output = subprocess.PIPE
+    
+    proc = subprocess.Popen(' '.join(cmd_args), stdin=sys.stdin, stdout=output,
                             stderr=sys.stderr, shell=True)
     retcode = proc.wait()
     if retcode != 0:
@@ -138,7 +145,7 @@ def file_md5(path):
     hashlib.md5(open(path, 'rb').read()).hexdigest()
 
 
-def setup_venv(venv_name):
+def setup_venv(venv_name, verbose):
     """Main venv functionality entry point, run before doing things"""
     ini_path = get_ini_path()
     if not venv_exists(venv_name):
@@ -152,12 +159,16 @@ def setup_venv(venv_name):
         print "Installing {}".format(dep)
         if dep.startswith('file:'):
             dep = rel_path_to_abs(dep.split('file:')[1])
-            subprocess_call(['pip', 'install', '-r', dep])
+            subprocess_call(['pip', 'install', '-r', dep], verbose)
         else:
-            subprocess_call(['pip', 'install', dep])
+            subprocess_call(['pip', 'install', dep], verbose)
 
 
 def activate_venv(venv_name):
+    if not venv_exists(venv_name):
+        exit_with_err("Cannot activate venv {} because it does not exist".format(venv_name))
+        return
+    
     global ORIGINAL_PATH
     if not ORIGINAL_PATH:
         ORIGINAL_PATH = sys.path
@@ -181,52 +192,29 @@ def sub_shell():
     # stderr=sys.stderr, shell=True, executable=shell)
     # proc.wait()
 
-
-### CLI
-@click.group()
-@click.version_option(version.__version__)
-def main_cli():
-    pass
-
-
-@main_cli.command()
-@click.argument('venv_name', nargs=1)
-@click.argument('cmd', nargs=-1)
-def run(venv_name, cmd):
-    """Runs a command in the env provided with prep (does the pip installs before running)"""
-    setup_venv(venv_name)
-    subprocess_call(cmd)
-
-
-@main_cli.command()
-@click.argument('venv_name', nargs=1)
-@click.argument('cmd', nargs=-1)
-def irun(venv_name, cmd):
-    """Runs a command in the env provided without prep (no pip installs)"""
-    activate_venv(venv_name)
-    subprocess_call(cmd)
-
-
-@main_cli.command()
-@click.argument('venv_name')
-def path(venv_name):
-    global ORIGINAL_PATH
-    NEW_PATH = list(set(ORIGINAL_PATH) - set(sys.path))
-    activate_venv(venv_name)
-    sys.stdout.write("export PATH={}:$PATH\n".format(':'.join(NEW_PATH)))
-    # sub_shell()
-
-
-@main_cli.command()
-def init():
+    
+def init(venv_names, verbose):
     """Sets up all the venvs for the project"""
     ini_path = get_ini_path()
-    venvs = parse_ini(ini_path).keys()
-    map(setup_venv, venvs)
+    if venv_names:
+        venvs = venv_names
+    else:
+        venvs = parse_ini(ini_path).keys()
+    map(lambda x: setup_venv(x, verbose), venvs)
 
+    # Write activate scripts
+    activate_template = '''
+function inenv() {
+    `inenv_helper should_eval $@` && `inenv_helper $@` || inenv_helper $@
+}
+'''
 
-@main_cli.command()
-@click.argument('venv_name')
+    activate_file = os.path.join(get_venv_path(get_working_path()), ACTIVATE_FILE_NAME)
+    with open(activate_file, "w") as activate_template_file:
+        activate_template_file.write(activate_template)
+    
+    sys.stdout.write("\nPlease source the following script in your rc file:\n{}\n".format(activate_file))
+
 def clean(venv_name):
     """Deletes the given venv to start over"""
     venv_path = venv_exists(venv_name)
@@ -236,7 +224,68 @@ def clean(venv_name):
     if run:
         delete_venv(venv_name)
 
+def run(venv_name, cmd, nobuild, verbose):
+    """Runs a command in the env provided"""
+    if nobuild:
+        activate_venv(venv_name)
+    else:
+        setup_venv(venv_name, verbose)
+    subprocess_call(cmd, verbose)
 
-if __name__ == '__main__':
+
+def switch(venv_name):
+    """Switch to a different virtual env"""
+    
+    SHELL = os.getenv('SHELL')
+    to_run = ""
+    if not venv_exists(venv_name):
+        to_run += "inenv init {}\n".format(venv_name)
+
+    to_source = os.path.join(get_venv_path(venv_name), 'bin/activate')
+    if any([shell in SHELL for shell in ['bash', 'zsh']]):
+        source_cmd = 'source'
+    else:
+        source_cmd = '.'
+    to_run += "{source_cmd} {rest}".format(source_cmd=source_cmd, rest=to_source)
+    sys.stdout.write(to_run)
+
+    
+@click.command()
+@click.version_option(version.__version__)
+@click.option('-v', '--verbose', count=True)
+@click.option('-n', '--nobuild', count=True)
+@click.argument('cmdargs', nargs=-1)
+def main_cli(cmdargs, verbose, nobuild):
+    if not cmdargs:
+        exit_with_err('Please supply arguments.')
+        return
+
+    valid_cmds = ['init', 'clean']
+    
+    cmd = cmdargs[0]
+    args = cmdargs[1:]
+
+    # Check if stdout of command needs to be evaluated in shell
+    if cmd == 'should_eval':
+        subcmd = args[0]
+        subargs = args[1:]
+        if not subargs and subcmd not in valid_cmds:
+            sys.exit(0)        
+        sys.exit(1)
+
+    if cmd == 'init':
+        init(args, verbose > 0)
+        return
+    elif cmd == 'clean':
+        map(clean, args)
+        return
+
+    if not args:
+        switch(cmd)
+        return
+
+    run(cmd, args, nobuild > 0, verbose > 0)
+    
+
+if __name__ == "__main__":
     main_cli()
-

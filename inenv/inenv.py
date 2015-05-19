@@ -157,7 +157,7 @@ def setup_venv(venv_name, verbose, quiet):
     deps = parsed.get('deps', [])
     for dep in deps:
         if not quiet:
-            sys.stdout.write("Installing {}".format(dep))
+            print "Installing {}".format(dep)
         if dep.startswith('file:'):
             dep = rel_path_to_abs(dep.split('file:')[1])
             subprocess_call(['pip', 'install', '-r', dep], verbose)
@@ -215,7 +215,8 @@ function inenv() {
         activate_template_file.write(activate_template)
 
     if not quiet:
-        sys.stdout.write("\nPlease source the following script in your rc file:\n{}\n".format(activate_file))
+        print "Please include the following in your rc file:"
+        print "source \'{}\'".format(activate_file)
 
 def clean(venv_name):
     """Deletes the given venv to start over"""
@@ -249,7 +250,7 @@ def switch(venv_name):
     else:
         source_cmd = '.'
     to_run += "{source_cmd} {rest}".format(source_cmd=source_cmd, rest=to_source)
-    sys.stdout.write(to_run)
+    print to_run
 
 def print_help():
     help_text = '''Usage:
@@ -276,7 +277,7 @@ Sub-commands:
   clean ENV_NAME_1 ENV_NAME_2 Etc.:
        Deletes the listed venvs to start over.
 '''
-    sys.stdout.write(help_text)
+    print help_text
     return
     
     

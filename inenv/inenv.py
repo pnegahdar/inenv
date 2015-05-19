@@ -230,7 +230,7 @@ def run(venv_name, cmd, nobuild, verbose):
         activate_venv(venv_name)
     else:
         setup_venv(venv_name, verbose)
-    subprocess_call(cmd, verbose)
+    subprocess_call(cmd, True)
 
 
 def switch(venv_name):
@@ -249,17 +249,59 @@ def switch(venv_name):
     to_run += "{source_cmd} {rest}".format(source_cmd=source_cmd, rest=to_source)
     sys.stdout.write(to_run)
 
+def print_help():
+    help_text = '''Usage:
+1. inenv ENV_NAME OPTIONS
+Switches to venv ENV_NAME.
+
+2. inenv ENV_NAME OPTIONS -- COMMANDS
+Runs commands in the specified venv.
+
+3. inenv SUB_COMMAND ARGS OPTIONS
+See list of sub-commands.
+
+Options:
+  --help, -h: Print the help message and exit
+  --nobuild, -n: Does not install packages
+  --verbose, -v: Prints output of installations
+
+Sub-commands:
+  init ENV_NAME_1 ENV_NAME_2 Etc.:
+       Initializes all listed venvs.
+       If no venvs are listed, it initializes all of them.
+
+  clean ENV_NAME_1 ENV_NAME_2 Etc.:
+       Deletes the listed venvs to start over.
+'''
+    sys.stdout.write(help_text)
+    return
+    
     
 @click.command()
 @click.version_option(version.__version__)
 @click.option('-v', '--verbose', count=True)
 @click.option('-n', '--nobuild', count=True)
+@click.option('-h', '--help', count=True)
 @click.argument('cmdargs', nargs=-1)
-def main_cli(cmdargs, verbose, nobuild):
+def main_cli(cmdargs, verbose, nobuild, help):
     if not cmdargs:
-        exit_with_err('Please supply arguments.')
+        if not help:
+            # No arguments passed, exit with error
+            exit_with_err('Please supply arguments.')
+        else:
+            # No arguments passed except for --help, so print help
+            print_help()
         return
-
+    elif cmdargs and help > 0:
+        if cmdargs[0] == 'should_eval':
+            # help flag passed, but we don't want to evaluate
+            # the help message, so exit with error code
+            sys.exit(1)
+        else:
+            # help flag passed without should_eval, so print help
+            print_help()
+        return
+    
     valid_cmds = ['init', 'clean']
     
     cmd = cmdargs[0]
@@ -267,8 +309,12 @@ def main_cli(cmdargs, verbose, nobuild):
 
     # Check if stdout of command needs to be evaluated in shell
     if cmd == 'should_eval':
+        if not args:
+            sys.exit(1)
+        
         subcmd = args[0]
         subargs = args[1:]
+        
         if not subargs and subcmd not in valid_cmds:
             sys.exit(0)        
         sys.exit(1)

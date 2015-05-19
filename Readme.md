@@ -11,25 +11,38 @@ A simple utility to manage multiple virtual python environments in one project. 
 
 Basic usage:
 
-    Usage: inenv [OPTIONS] COMMAND [ARGS]...
+Usage:
+1. inenv ENV_NAME OPTIONS
+Switches to venv ENV_NAME.
 
-    Options:
-      --help  Show this message and exit.
+2. inenv ENV_NAME OPTIONS -- COMMANDS
+Runs commands in the specified venv.
 
-    Commands:
-      clean  Deletes the given venv to start over
-      init   Sets up all the venvs for the project
-      irun   Runs a command in the env provided without prep (pip installs)
-      run    Runs a command in the env provided with prep (pip installs)
+3. inenv SUB_COMMAND ARGS OPTIONS
+See list of sub-commands.
+
+Options:
+  --help, -h: Print the help message and exit
+  --nobuild, -n: Does not install packages
+  --verbose, -v: Prints output of installations
+
+Sub-commands:
+  init ENV_NAME_1 ENV_NAME_2 Etc.:
+       Initializes all listed venvs.
+       If no venvs are listed, it initializes all of them.
+
+  clean ENV_NAME_1 ENV_NAME_2 Etc.:
+       Deletes the listed venvs to start over.
+
 
 Example Usage:
 
-    inenv run webproject python manage.py syncdb
+    # Switches to webproject
+    inenv webproject 
 
-    inenv run subproject nosetest
-
-    inenv run webproject -- python manage.py syncdb --hello # Use posix style -- to pass all args
-
+    # Runs `python manage.py syncdb` in the webproject venv
+    # Use posix style -- to pass all args
+    inenv webproject -- python manage.py syncdb --hello 
 
 
 

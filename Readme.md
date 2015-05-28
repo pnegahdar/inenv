@@ -9,32 +9,6 @@ A simple utility to manage multiple virtual python environments in one project. 
 
 ### Usage ###
 
-Basic usage:
-
-Usage:
-1. inenv ENV_NAME OPTIONS
-Switches to venv ENV_NAME.
-
-2. inenv ENV_NAME OPTIONS -- COMMANDS
-Runs commands in the specified venv.
-
-3. inenv SUB_COMMAND ARGS OPTIONS
-See list of sub-commands.
-
-Options:
-  --help, -h: Print the help message and exit
-  --quiet, -q: Does not print anything to stdout.
-  --verbose, -v: Prints output of installations
-  --nobuild, -n: Does not install packages
-
-Sub-commands:
-  init ENV_NAME_1 ENV_NAME_2 Etc.:
-       Initializes all listed venvs.
-       If no venvs are listed, it initializes all of them.
-
-  clean ENV_NAME_1 ENV_NAME_2 Etc.:
-       Deletes the listed venvs to start over.
-
 
 Example Usage:
 
@@ -44,6 +18,37 @@ Example Usage:
     # Runs `python manage.py syncdb` in the webproject venv
     # Use posix style -- to pass all args
     inenv webproject -- python manage.py syncdb --hello 
+
+
+Helps Docs:
+
+    Basic usage:
+    
+    Usage:
+    1. inenv ENV_NAME OPTIONS
+    Switches to venv ENV_NAME.
+    
+    2. inenv ENV_NAME OPTIONS -- COMMANDS
+    Runs commands in the specified venv.
+    
+    3. inenv SUB_COMMAND ARGS OPTIONS
+    See list of sub-commands.
+    
+    Options:
+      --help, -h: Print the help message and exit
+      --quiet, -q: Does not print anything to stdout.
+      --verbose, -v: Prints output of installations
+      --nobuild, -n: Does not install packages
+    
+    Sub-commands:
+      init ENV_NAME_1 ENV_NAME_2 Etc.:
+           Initializes all listed venvs.
+           If no venvs are listed, it initializes all of them.
+    
+      clean ENV_NAME_1 ENV_NAME_2 Etc.:
+           Deletes the listed venvs to start over.
+
+
 
 
 

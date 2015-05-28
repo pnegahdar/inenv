@@ -184,8 +184,7 @@ def activate_venv(venv_name):
 def exit_with_err(msg=None):
     if msg:
         click.echo(click.style(msg, fg='red'), err=True)
-    exit_with_err()
-
+    sys.exit(1)
 
 def sub_shell():
     shell = os.getenv('SHELL')

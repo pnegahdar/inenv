@@ -1,6 +1,6 @@
 # InEnv #
 
-A simple utility to manage multiple virtual python environments in one project. Functionally similar to tox but makes no assumption what you want to use it for (tests, etc).
+A simple utility to manage multiple virtual python environments and activate them when you need it 
 
 
 ### Install ###
@@ -12,7 +12,7 @@ A simple utility to manage multiple virtual python environments in one project. 
 
 Example Usage:
 
-    # Switches to webproject
+    # Switches your current env to webproject
     inenv webproject 
 
     # Runs `python manage.py syncdb` in the webproject venv

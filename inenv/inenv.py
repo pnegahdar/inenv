@@ -11,6 +11,7 @@ import sys
 
 from virtualenv import create_environment
 import click
+from click.termui import isatty
 
 import version
 
@@ -22,6 +23,9 @@ ORIGINAL_PATH = None
 INI_PATH = None
 RECURSION_LIMIT = 100
 
+SHELL_ACTIVATOR_SETUP_ENVVAR = 'INENV_SWITCH_SETUP'
+
+ARG_SHOULD_EVAL = 'should_eval'
 
 ### PATH STUFF
 def get_ini_path():
@@ -73,7 +77,7 @@ def subprocess_call(cmd_args, verbose):
     output = sys.stdout
     if not verbose:
         output = subprocess.PIPE
-    
+
     proc = subprocess.Popen(' '.join(cmd_args), stdin=sys.stdin, stdout=output,
                             stderr=sys.stderr, shell=True)
     retcode = proc.wait()
@@ -169,7 +173,6 @@ def activate_venv(venv_name):
     if not venv_exists(venv_name):
         exit_with_err("Cannot activate venv {} because it does not exist".format(venv_name))
         return
-    
     global ORIGINAL_PATH
     if not ORIGINAL_PATH:
         ORIGINAL_PATH = sys.path
@@ -178,9 +181,10 @@ def activate_venv(venv_name):
     execfile(exec_file_path, dict(__file__=exec_file_path))
 
 
-def exit_with_err(msg):
-    click.echo(click.style(msg, fg='red'), err=True)
-    sys.exit(1)
+def exit_with_err(msg=None):
+    if msg:
+        click.echo(click.style(msg, fg='red'), err=True)
+    exit_with_err()
 
 
 def sub_shell():
@@ -193,7 +197,26 @@ def sub_shell():
     # stderr=sys.stderr, shell=True, executable=shell)
     # proc.wait()
 
-    
+
+def setup_inenv_shell_activator(quiet=False):
+    # Write activate scripts
+    activate_template = '''export {}=true
+function inenv() {{
+    `inenv_helper {} $@` && `inenv_helper $@` || inenv_helper $@
+}}
+'''.format(SHELL_ACTIVATOR_SETUP_ENVVAR, ARG_SHOULD_EVAL)
+
+    activate_file = os.path.join(get_venv_path(get_working_path()), ACTIVATE_FILE_NAME)
+    with open(activate_file, "w") as activate_template_file:
+        activate_template_file.write(activate_template)
+
+    if not quiet:
+        click.echo(
+            click.style("Please include the following in your rc file if you want to switch envs:",
+                        fg='green'))
+        click.echo("source \'{}\'".format(activate_file))
+
+
 def init(venv_names, verbose, quiet):
     """Sets up all the venvs for the project"""
     ini_path = get_ini_path()
@@ -202,21 +225,8 @@ def init(venv_names, verbose, quiet):
     else:
         venvs = parse_ini(ini_path).keys()
     map(lambda x: setup_venv(x, verbose, quiet), venvs)
+    setup_inenv_shell_activator(quiet)
 
-    # Write activate scripts
-    activate_template = '''
-function inenv() {
-    `inenv_helper should_eval $@` && `inenv_helper $@` || inenv_helper $@
-}
-'''
-
-    activate_file = os.path.join(get_venv_path(get_working_path()), ACTIVATE_FILE_NAME)
-    with open(activate_file, "w") as activate_template_file:
-        activate_template_file.write(activate_template)
-
-    if not quiet:
-        print "Please include the following in your rc file:"
-        print "source \'{}\'".format(activate_file)
 
 def clean(venv_name):
     """Deletes the given venv to start over"""
@@ -227,7 +237,8 @@ def clean(venv_name):
     if run:
         delete_venv(venv_name)
 
-def run(venv_name, cmd, nobuild, verbose, quiet):
+
+def run(venv_name, cmd, nobuild=False, verbose=False, quiet=False):
     """Runs a command in the env provided"""
     if nobuild:
         activate_venv(venv_name)
@@ -238,7 +249,9 @@ def run(venv_name, cmd, nobuild, verbose, quiet):
 
 def switch(venv_name):
     """Switch to a different virtual env"""
-    
+    if not os.getenv(SHELL_ACTIVATOR_SETUP_ENVVAR):
+        setup_inenv_shell_activator()
+        sys.exit()
     SHELL = os.getenv('SHELL')
     to_run = ""
     if not venv_exists(venv_name):
@@ -252,80 +265,70 @@ def switch(venv_name):
     to_run += "{source_cmd} {rest}".format(source_cmd=source_cmd, rest=to_source)
     print to_run
 
+
 def print_help():
     help_text = '''Usage:
-1. inenv ENV_NAME OPTIONS
-Switches to venv ENV_NAME.
+    inenv ENV_NAME OPTIONS
+        Switches to venv ENV_NAME.
 
-2. inenv ENV_NAME OPTIONS -- COMMANDS
-Runs commands in the specified venv.
+    inenv ENV_NAME OPTIONS -- COMMANDS
+        Runs commands in the specified venv.
 
-3. inenv SUB_COMMAND ARGS OPTIONS
-See list of sub-commands.
+    inenv SUB_COMMAND ARGS OPTIONS
+        See list of sub-commands.
 
-Options:
-  --help, -h: Print the help message and exit
-  --quiet, -q: Does not print anything to stdout.
-  --verbose, -v: Prints output of installations
-  --nobuild, -n: Does not install packages
+    Options:
+      --help, -h: Print the help message and exit
+      --quiet, -q: Does not print anything to stdout.
+      --verbose, -v: Prints output of installations
+      --nobuild, -n: Does not install packages
 
-Sub-commands:
-  init ENV_NAME_1 ENV_NAME_2 Etc.:
-       Initializes all listed venvs.
-       If no venvs are listed, it initializes all of them.
+    Sub-commands:
+      init ENV_NAME_1 ENV_NAME_2 Etc.:
+           Initializes all listed venvs.
+           If no venvs are listed, it initializes all of them.
 
-  clean ENV_NAME_1 ENV_NAME_2 Etc.:
-       Deletes the listed venvs to start over.
+      clean ENV_NAME_1 ENV_NAME_2 Etc.:
+           Deletes the listed venvs to start over.
 '''
-    print help_text
-    return
-    
-    
+    click.echo(help_text)
+
+
 @click.command()
 @click.version_option(version.__version__)
-@click.option('-v', '--verbose', count=True)
-@click.option('-n', '--nobuild', count=True)
-@click.option('-q', '--quiet', count=True)
-@click.option('-h', '--help', count=True)
+@click.option('-v', '--verbose', is_flag=True)
+@click.option('-n', '--nobuild', is_flag=True)
+@click.option('-q', '--quiet', is_flag=True)
+@click.option('-h', '--help', is_flag=True)
 @click.argument('cmdargs', nargs=-1)
 def main_cli(cmdargs, verbose, nobuild, quiet, help):
+    # Default to quiet if not tty
+    if not isatty(sys.stdout):
+        quiet = True
+    if help:
+        print_help()
+        return
     if not cmdargs:
-        if not help:
-            # No arguments passed, exit with error
-            exit_with_err('Please supply arguments.')
-        else:
-            # No arguments passed except for --help, so print help
-            print_help()
-        return
-    elif cmdargs and help > 0:
-        if cmdargs[0] == 'should_eval':
-            # help flag passed, but we don't want to evaluate
-            # the help message, so exit with error code
-            sys.exit(1)
-        else:
-            # help flag passed without should_eval, so print help
-            print_help()
-        return
-    
+        exit_with_err('Please supply arguments or --help for help')
+    elif cmdargs[0] == ARG_SHOULD_EVAL:
+        exit_with_err()
+
     valid_cmds = ['init', 'clean']
-    
     cmd = cmdargs[0]
     args = cmdargs[1:]
 
     # Check if stdout of command needs to be evaluated in shell
-    if cmd == 'should_eval':
+    if cmd == ARG_SHOULD_EVAL:
         if not args:
-            sys.exit(1)
-        
+            exit_with_err()
         subcmd = args[0]
         subargs = args[1:]
-        
         if not subargs and subcmd not in valid_cmds:
-            sys.exit(0)        
-        sys.exit(1)
+            sys.exit()
+        exit_with_err()
 
     if cmd == 'init':
-        init(args, verbose > 0, quiet > 0)
+        init(args, verbose, quiet)
         return
     elif cmd == 'clean':
         map(clean, args)
@@ -335,8 +338,8 @@ def main_cli(cmdargs, verbose, nobuild, quiet, help):
         switch(cmd)
         return
 
-    run(cmd, args, nobuild > 0, verbose > 0, quiet > 0)
-    
+    run(cmd, args, nobuild, verbose, quiet)
+
 
 if __name__ == "__main__":
     main_cli()

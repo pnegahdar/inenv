@@ -216,14 +216,14 @@ function inenv() {{
         click.echo("source \'{}\'".format(activate_file))
 
 
-def init(venv_names, verbose, quiet):
+def init(venv_names, quiet=False):
     """Sets up all the venvs for the project"""
     ini_path = get_ini_path()
     if venv_names:
         venvs = venv_names
     else:
         venvs = parse_ini(ini_path).keys()
-    map(lambda x: setup_venv(x, verbose, quiet), venvs)
+    map(lambda x: setup_venv(x, verbose=True, quiet=quiet), venvs)
     setup_inenv_shell_activator(quiet)
 
 
@@ -309,8 +309,6 @@ def main_cli(cmdargs, verbose, nobuild, quiet, help):
         return
     if not cmdargs:
         exit_with_err('Please supply arguments or --help for help')
-    elif cmdargs[0] == ARG_SHOULD_EVAL:
-        exit_with_err()
 
     valid_cmds = ['init', 'clean']
     cmd = cmdargs[0]
@@ -327,7 +325,7 @@ def main_cli(cmdargs, verbose, nobuild, quiet, help):
         exit_with_err()
 
     if cmd == 'init':
-        init(args, verbose, quiet)
+        init(args, quiet=quiet)
         return
     elif cmd == 'clean':
         map(clean, args)

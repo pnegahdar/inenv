@@ -30,6 +30,7 @@ Helps Docs:
     
     2. inenv ENV_NAME OPTIONS -- COMMANDS
     Runs commands in the specified venv.
+    Alternatively, you can run: inenv run ENV_NAME OPTIONS -- COMMANDS
 
     3. inenv runall OPTIONS -- COMMANDS
     Runs commands in all existing venvs.

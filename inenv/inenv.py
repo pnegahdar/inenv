@@ -27,6 +27,8 @@ SHELL_ACTIVATOR_SETUP_ENVVAR = 'INENV_SWITCH_SETUP'
 
 ARG_SHOULD_EVAL = 'should_eval'
 
+RE_ENTER_ERR_CODE = 255
+
 ### PATH STUFF
 def get_ini_path():
     """Walks up till it finds a inenv.ini"""
@@ -201,9 +203,15 @@ def setup_inenv_shell_activator(quiet=False):
     # Write activate scripts
     activate_template = '''export {}=true
 function inenv() {{
-    `inenv_helper {} $@` && `inenv_helper $@` || inenv_helper $@
+    inenv_helper {} $@ 
+    rc=$?
+    if [[ $rc == {} ]]; then
+        `inenv_helper $@`
+    elif [[ $rc == 0 ]]; then
+        inenv_helper $@
+    fi
 }}
-'''.format(SHELL_ACTIVATOR_SETUP_ENVVAR, ARG_SHOULD_EVAL)
+'''.format(SHELL_ACTIVATOR_SETUP_ENVVAR, ARG_SHOULD_EVAL, RE_ENTER_ERR_CODE)
 
     activate_file = os.path.join(get_venv_path(get_working_path()), ACTIVATE_FILE_NAME)
     with open(activate_file, "w") as activate_template_file:
@@ -213,7 +221,7 @@ function inenv() {{
         click.echo(
             click.style("Please include the following in your rc file if you want to switch envs:",
                         fg='green'))
-        click.echo("source \'{}\'".format(activate_file))
+        click.echo(activate_file)
 
 
 def init(venv_names, quiet=False):
@@ -323,17 +331,18 @@ def main_cli(cmdargs, verbose, nobuild, quiet, help):
             # No arguments passed except for --help, so print help
             print_help()
             return
-    elif cmdargs and help > 0:
+    elif help:
         if cmdargs[0] == ARG_SHOULD_EVAL:
             # help flag passed, but we don't want to evaluate
             # the help message, so exit with error code
-            exit_with_err()
+            return
         else:
-            # help flag passed without ARG_SHOULD_EVAL, so print help
+            # help flag passed, along with other arguments, so
+            # print help and ignore the rest of the commands
             print_help()
             return
 
-    valid_cmds = ['init', 'clean']
+    valid_cmds = ['init', 'clean', 'runall', 'run']
     cmd = cmdargs[0]
     args = cmdargs[1:]
 
@@ -341,23 +350,29 @@ def main_cli(cmdargs, verbose, nobuild, quiet, help):
     if cmd == ARG_SHOULD_EVAL:
         if not args:
             exit_with_err()
-            
+
         subcmd = args[0]
         subargs = args[1:]
         
         if not subargs and subcmd not in valid_cmds:
-            sys.exit(0)
-            
-        exit_with_err()
+            # this is a switch command, so re-enter
+            sys.exit(RE_ENTER_ERR_CODE)
+
+        sys.exit(0)
 
     if cmd == 'init':
-        init(args, quiet=quiet)
+        init(args, quiet=quiet) 
         return
     elif cmd == 'clean':
         map(clean, args)
         return
     elif cmd == 'runall':
         runall(args, nobuild, verbose, quiet)
+        return
+    elif cmd == 'run':
+        venv = args[0]
+        args = args[1:]
+        run(venv, args, nobuild, verbose, quiet)
         return
 
     if not args:

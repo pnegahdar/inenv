@@ -8,4 +8,4 @@
 # http://www.opensource.org/licenses/MIT-license
 # Copyright (c) 2015, Parham Negahdar <pnegahdar@gmail.com>
 
-__version__ = '0.2.6'  # NOQA
+__version__ = '0.2.7'  # NOQA

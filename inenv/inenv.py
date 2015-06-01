@@ -265,28 +265,38 @@ def switch(venv_name):
     print to_run
 
 
+def runall(args, nobuild, verbose, quiet):
+    ini_path = get_ini_path()
+    venvs = parse_ini(ini_path).keys()
+    for cmd in venvs:
+        run(cmd, args, nobuild, verbose, quiet)    
+
+
 def print_help():
     help_text = '''Usage:
-    inenv ENV_NAME OPTIONS
-        Switches to venv ENV_NAME.
-
-    inenv ENV_NAME OPTIONS -- COMMANDS
-        Runs commands in the specified venv.
-
-    inenv SUB_COMMAND ARGS OPTIONS
-        See list of sub-commands.
-
+    1. inenv ENV_NAME OPTIONS
+    Switches to venv ENV_NAME.
+    
+    2. inenv ENV_NAME OPTIONS -- COMMANDS
+    Runs commands in the specified venv.
+    
+    3. inenv runall OPTIONS -- COMMANDS
+    Runs commands in all existing venvs.
+    
+    4. inenv SUB_COMMAND ARGS OPTIONS
+    See list of sub-commands.
+    
     Options:
       --help, -h: Print the help message and exit
       --quiet, -q: Does not print anything to stdout.
       --verbose, -v: Prints output of installations
       --nobuild, -n: Does not install packages
-
+    
     Sub-commands:
       init ENV_NAME_1 ENV_NAME_2 Etc.:
            Initializes all listed venvs.
            If no venvs are listed, it initializes all of them.
-
+    
       clean ENV_NAME_1 ENV_NAME_2 Etc.:
            Deletes the listed venvs to start over.
 '''
@@ -329,6 +339,9 @@ def main_cli(cmdargs, verbose, nobuild, quiet, help):
         return
     elif cmd == 'clean':
         map(clean, args)
+        return
+    elif cmd == 'runall':
+        runall(args, nobuild, verbose, quiet)
         return
 
     if not args:

@@ -314,11 +314,24 @@ def main_cli(cmdargs, verbose, nobuild, quiet, help):
     # Default to quiet if not tty
     if not isatty(sys.stdout):
         quiet = True
-    if help:
-        print_help()
-        return
+
     if not cmdargs:
-        exit_with_err('Please supply arguments or --help for help')
+        if not help:
+            # No arguments passed, exit with error
+            exit_with_err('Please supply arguments or --help for help')
+        else:
+            # No arguments passed except for --help, so print help
+            print_help()
+            return
+    elif cmdargs and help > 0:
+        if cmdargs[0] == ARG_SHOULD_EVAL:
+            # help flag passed, but we don't want to evaluate
+            # the help message, so exit with error code
+            exit_with_err()
+        else:
+            # help flag passed without ARG_SHOULD_EVAL, so print help
+            print_help()
+            return
 
     valid_cmds = ['init', 'clean', 'runall', 'run']
     cmd = cmdargs[0]
@@ -328,10 +341,13 @@ def main_cli(cmdargs, verbose, nobuild, quiet, help):
     if cmd == ARG_SHOULD_EVAL:
         if not args:
             exit_with_err()
+            
         subcmd = args[0]
         subargs = args[1:]
+        
         if not subargs and subcmd not in valid_cmds:
-            sys.exit()
+            sys.exit(0)
+            
         exit_with_err()
 
     if cmd == 'init':

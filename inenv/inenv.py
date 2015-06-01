@@ -287,6 +287,7 @@ def print_help():
 
     2. inenv ENV_NAME OPTIONS -- COMMANDS
     Runs commands in the specified venv.
+    Alternatively, you can run: inenv run ENV_NAME OPTIONS -- COMMANDS
 
     3. inenv runall OPTIONS -- COMMANDS
     Runs commands in all existing venvs.
@@ -326,7 +327,8 @@ def main_cli(cmdargs, verbose, nobuild, quiet, help):
     if not cmdargs:
         if not help:
             # No arguments passed, exit with error
-            exit_with_err('Please supply arguments or --help for help')
+            print_help()
+            return
         else:
             # No arguments passed except for --help, so print help
             print_help()
@@ -345,11 +347,11 @@ def main_cli(cmdargs, verbose, nobuild, quiet, help):
     valid_cmds = ['init', 'clean', 'runall', 'run']
     cmd = cmdargs[0]
     args = cmdargs[1:]
-
+    
     # Check if stdout of command needs to be evaluated in shell
     if cmd == ARG_SHOULD_EVAL:
         if not args:
-            exit_with_err()
+            sys.exit()
 
         subcmd = args[0]
         subargs = args[1:]

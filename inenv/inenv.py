@@ -73,13 +73,16 @@ def get_execfile_path(venv_name):
 
 ### Venv Stuff
 
-def subprocess_call(cmd_args, verbose):
+def subprocess_call(cmd_args, verbose, env=None):
     output = sys.stdout
     if not verbose:
         output = subprocess.PIPE
 
+    kwargs = {}
+    if env is not None:
+        kwargs['env'] = env
     proc = subprocess.Popen(' '.join(cmd_args), stdin=sys.stdin, stdout=output,
-                            stderr=sys.stderr, shell=True)
+                            stderr=sys.stderr, shell=True, **kwargs)
     retcode = proc.wait()
     if retcode != 0:
         exit_with_err('Runtime Error')
@@ -237,13 +240,13 @@ def clean(venv_name):
         delete_venv(venv_name)
 
 
-def run(venv_name, cmd, nobuild=False, verbose=False, quiet=False):
+def run(venv_name, cmd, nobuild=False, verbose=False, quiet=False, env=None):
     """Runs a command in the env provided"""
     if nobuild:
         activate_venv(venv_name)
     else:
         setup_venv(venv_name, verbose, quiet)
-    subprocess_call(cmd, True)
+    subprocess_call(cmd, True, env=env)
 
 
 def switch(venv_name):
@@ -269,34 +272,34 @@ def runall(args, nobuild, verbose, quiet):
     ini_path = get_ini_path()
     venvs = parse_ini(ini_path).keys()
     for cmd in venvs:
-        run(cmd, args, nobuild, verbose, quiet)    
+        run(cmd, args, nobuild, verbose, quiet)
 
 
 def print_help():
     help_text = '''Usage:
     1. inenv ENV_NAME OPTIONS
     Switches to venv ENV_NAME.
-    
+
     2. inenv ENV_NAME OPTIONS -- COMMANDS
     Runs commands in the specified venv.
-    
+
     3. inenv runall OPTIONS -- COMMANDS
     Runs commands in all existing venvs.
-    
+
     4. inenv SUB_COMMAND ARGS OPTIONS
     See list of sub-commands.
-    
+
     Options:
       --help, -h: Print the help message and exit
       --quiet, -q: Does not print anything to stdout.
       --verbose, -v: Prints output of installations
       --nobuild, -n: Does not install packages
-    
+
     Sub-commands:
       init ENV_NAME_1 ENV_NAME_2 Etc.:
            Initializes all listed venvs.
            If no venvs are listed, it initializes all of them.
-    
+
       clean ENV_NAME_1 ENV_NAME_2 Etc.:
            Deletes the listed venvs to start over.
 '''

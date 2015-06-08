@@ -9,11 +9,26 @@ A simple utility to manage multiple virtual python environments and activate the
 
 ### Usage ###
 
+Create a config file called `inenv.ini` in your project root directory:
 
-Example Usage:
+    [webproject]
+    deps: file:requirements.txt
+    
+    [service]
+    deps: file:subproject/app/requirements.txt
+    
+
+Example Usage (in any directory of the project):
+
+    # Initialize inenv
+    inenv init
+    # Note this will tell you to add a file to source in bash, if you want to switch envs in your shell, do this.  
 
     # Switches your current env to webproject
-    inenv webproject 
+    inenv webproject
+  
+    inenv service
+    
 
     # Runs `python manage.py syncdb` in the webproject venv
     # Use posix style -- to pass all args

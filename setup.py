@@ -50,7 +50,7 @@ Simple multi virtualenv command runner
         # add your dependencies here
         # remember to use 'package-name>=x.y.z,<x.y+1.0' notation (this way you get bugfixes)
         'click==4.0',
-        'virtualenv==12.1.1'
+        'virtualenv==13.0.3'
     ],
     extras_require={
         'tests': tests_require,

@@ -13,7 +13,7 @@ from virtualenv import create_environment
 import click
 from click.termui import isatty
 
-import version
+from version import __version__
 
 
 FILE_NAME = 'inenv.ini'
@@ -28,6 +28,10 @@ SHELL_ACTIVATOR_SETUP_ENVVAR = 'INENV_SWITCH_SETUP'
 ARG_SHOULD_EVAL = 'should_eval'
 
 RE_ENTER_ERR_CODE = 255
+
+NORMAL_CMDS = ['init', 'clean', 'runall', 'run']
+REENTRANT_CMDS = ['jump']
+
 
 ### PATH STUFF
 def get_ini_path():
@@ -151,16 +155,20 @@ def file_md5(path):
     hashlib.md5(open(path, 'rb').read()).hexdigest()
 
 
-def setup_venv(venv_name, verbose, quiet):
-    """Main venv functionality entry point, run before doing things"""
-    ini_path = get_ini_path()
+def activate_and_get_deps(venv_name):
     if not venv_exists(venv_name):
         create_venv(venv_name)
     activate_venv(venv_name)
+    ini_path = get_ini_path()
     parsed = parse_ini(ini_path).get(venv_name)
     if not parsed:
         exit_with_err("Unable to find venv {} in ini {}".format(venv_name, ini_path))
     deps = parsed.get('deps', [])
+    return deps
+
+def setup_venv(venv_name, verbose, quiet):
+    """Main venv functionality entry point, run before doing things"""
+    deps = activate_and_get_deps(venv_name)
     for dep in deps:
         if not quiet:
             print "Installing {}".format(dep)
@@ -170,6 +178,18 @@ def setup_venv(venv_name, verbose, quiet):
         else:
             subprocess_call(['pip', 'install', dep], verbose)
 
+
+def jump_to_req_dir(venv_name):
+    """Jumps to the directory of the reqs file"""
+    deps = activate_and_get_deps(venv_name)
+    for dep in deps:
+        if dep.startswith('file:'):
+            dep = rel_path_to_abs(dep.split('file:')[1])
+            dirname = os.path.dirname(dep)
+            print "cd {}".format(dirname)
+            break
+    
+    switch(venv_name)
 
 def activate_venv(venv_name):
     if not venv_exists(venv_name):
@@ -206,7 +226,8 @@ function inenv() {{
     inenv_helper {} $@ 
     rc=$?
     if [[ $rc == {} ]]; then
-        `inenv_helper $@`
+        tmpout=`inenv_helper $@`
+        eval $tmpout
     elif [[ $rc == 0 ]]; then
         inenv_helper $@
     fi
@@ -308,43 +329,50 @@ def print_help():
 
       clean ENV_NAME_1 ENV_NAME_2 Etc.:
            Deletes the listed venvs to start over.
+
+      jump ENV_NAME:
+           Jumps to the directory of the requirements.txt file and
+           switches to ENV_NAME.
 '''
     click.echo(help_text)
 
 
+def print_version():
+    '''Prints the version number'''
+    print "inenv, version {}".format(__version__)    
+
+
 @click.command()
-@click.version_option(version.__version__)
 @click.option('-v', '--verbose', is_flag=True)
 @click.option('-n', '--nobuild', is_flag=True)
 @click.option('-q', '--quiet', is_flag=True)
 @click.option('-h', '--help', is_flag=True)
+@click.option('--version', is_flag=True)
 @click.argument('cmdargs', nargs=-1)
-def main_cli(cmdargs, verbose, nobuild, quiet, help):
+def main_cli(cmdargs, verbose, nobuild, quiet, help, version):
     # Default to quiet if not tty
     if not isatty(sys.stdout):
         quiet = True
 
-    if not cmdargs:
-        if not help:
-            # No arguments passed, exit with error
+    # if we do not need to re-enter, then print version/help
+    # if appropriate, ignore all other arguments
+    if not cmdargs or cmdargs[0] != ARG_SHOULD_EVAL:
+        if version:
+            print_version()
+            return
+        elif help:
             print_help()
             return
-        else:
-            # No arguments passed except for --help, so print help
-            print_help()
+        elif not cmdargs:
+            # only flags passed, so we don't want to reenter
             return
-    elif help:
-        if cmdargs[0] == ARG_SHOULD_EVAL:
-            # help flag passed, but we don't want to evaluate
-            # the help message, so exit with error code
+        
+    # if we do need to re-enter, then return immediately on
+    # version/help so as not to evaluate their output
+    if cmdargs[0] == ARG_SHOULD_EVAL:
+        if version or help:
             return
-        else:
-            # help flag passed, along with other arguments, so
-            # print help and ignore the rest of the commands
-            print_help()
-            return
-
-    valid_cmds = ['init', 'clean', 'runall', 'run']
+    
     cmd = cmdargs[0]
     args = cmdargs[1:]
     
@@ -356,10 +384,9 @@ def main_cli(cmdargs, verbose, nobuild, quiet, help):
         subcmd = args[0]
         subargs = args[1:]
         
-        if not subargs and subcmd not in valid_cmds:
+        if (not subargs and subcmd not in NORMAL_CMDS) or (subcmd in REENTRANT_CMDS):
             # this is a switch command, so re-enter
-            sys.exit(RE_ENTER_ERR_CODE)
-
+            sys.exit(RE_ENTER_ERR_CODE)            
         sys.exit(0)
 
     if cmd == 'init':
@@ -367,6 +394,11 @@ def main_cli(cmdargs, verbose, nobuild, quiet, help):
         return
     elif cmd == 'clean':
         map(clean, args)
+        return
+    elif cmd == 'jump':
+        if len(args) != 1:
+            exit_with_err('Subcommand jump expects only 1 argument.')            
+        jump_to_req_dir(args[0])
         return
     elif cmd == 'runall':
         runall(args, nobuild, verbose, quiet)

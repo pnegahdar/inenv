@@ -52,6 +52,9 @@ Helps Docs:
       clean ENV_NAME_1 ENV_NAME_2 Etc.:
            Deletes the listed venvs to start over.
 
+      jump ENV_NAME:
+           Jumps to the directory of the requirements.txt file and
+           switches to ENV_NAME.
 
 
 

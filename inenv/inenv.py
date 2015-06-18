@@ -13,7 +13,7 @@ from virtualenv import create_environment
 import click
 from click.termui import isatty
 
-import version
+from version import __version__
 
 
 FILE_NAME = 'inenv.ini'
@@ -337,38 +337,42 @@ def print_help():
     click.echo(help_text)
 
 
+def print_version():
+    '''Prints the version number'''
+    print "inenv, version {}".format(__version__)    
+
+
 @click.command()
-@click.version_option(version.__version__)
 @click.option('-v', '--verbose', is_flag=True)
 @click.option('-n', '--nobuild', is_flag=True)
 @click.option('-q', '--quiet', is_flag=True)
 @click.option('-h', '--help', is_flag=True)
+@click.option('--version', is_flag=True)
 @click.argument('cmdargs', nargs=-1)
-def main_cli(cmdargs, verbose, nobuild, quiet, help):
+def main_cli(cmdargs, verbose, nobuild, quiet, help, version):
     # Default to quiet if not tty
     if not isatty(sys.stdout):
         quiet = True
 
-    if not cmdargs:
-        if not help:
-            # No arguments passed, exit with error
+    # if we do not need to re-enter, then print version/help
+    # if appropriate, ignore all other arguments
+    if not cmdargs or cmdargs[0] != ARG_SHOULD_EVAL:
+        if version:
+            print_version()
+            return
+        elif help:
             print_help()
             return
-        else:
-            # No arguments passed except for --help, so print help
-            print_help()
+        elif not cmdargs:
+            # only flags passed, so we don't want to reenter
             return
-    elif help:
-        if cmdargs[0] == ARG_SHOULD_EVAL:
-            # help flag passed, but we don't want to evaluate
-            # the help message, so exit with error code
+        
+    # if we do need to re-enter, then return immediately on
+    # version/help so as not to evaluate their output
+    if cmdargs[0] == ARG_SHOULD_EVAL:
+        if version or help:
             return
-        else:
-            # help flag passed, along with other arguments, so
-            # print help and ignore the rest of the commands
-            print_help()
-            return
-
+    
     cmd = cmdargs[0]
     args = cmdargs[1:]
     

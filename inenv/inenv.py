@@ -76,8 +76,13 @@ def get_venv_path(venv_name):
 def get_execfile_path(venv_name):
     return os.path.join(get_venv_path(venv_name), 'bin/activate_this.py')
 
+
 def is_subcmd(venv_name):
     return (venv_name in NORMAL_CMDS) or (venv_name in REENTRANT_CMDS)
+    
+
+def switch_script_upto_date():
+    return os.getenv(SHELL_ACTIVATOR_SETUP_ENVVAR) == str(__version__)
 
 
 ### Venv Stuff
@@ -193,6 +198,7 @@ def setup_venv(venv_name, verbose, quiet):
 def jump_to_req_dir(venv_name):
     """Jumps to the directory of the reqs file"""
     deps = activate_and_get_deps(venv_name)
+    switch(venv_name)
     for dep in deps:
         if dep.startswith('file:'):
             dep = rel_path_to_abs(dep.split('file:')[1])
@@ -200,8 +206,6 @@ def jump_to_req_dir(venv_name):
             print "cd {}".format(dirname)
             break
     
-    switch(venv_name)
-
 def activate_venv(venv_name):
     if not venv_exists(venv_name):
         exit_with_err("Cannot activate venv {} because it does not exist".format(venv_name))
@@ -214,9 +218,12 @@ def activate_venv(venv_name):
     execfile(exec_file_path, dict(__file__=exec_file_path))
 
 
+def print_err(msg):
+    click.echo(click.style(msg, fg='red'), err=True)
+
 def exit_with_err(msg=None):
     if msg:
-        click.echo(click.style(msg, fg='red'), err=True)
+        print_err(msg)
     sys.exit(1)
 
 def sub_shell():
@@ -230,9 +237,13 @@ def sub_shell():
     # proc.wait()
 
 
-def setup_inenv_shell_activator(quiet=False):
+def setup_inenv_shell_activator():
+    '''Creates switch script. Returns true if switch script is up to date, otherwise false.'''
+    if switch_script_upto_date():
+        return True
+    
     # Write activate scripts
-    activate_template = '''export {}=true
+    activate_template = '''export {}={}
 function inenv() {{
     inenv_helper {} $@ 
     rc=$?
@@ -243,18 +254,19 @@ function inenv() {{
         inenv_helper $@
     fi
 }}
-'''.format(SHELL_ACTIVATOR_SETUP_ENVVAR, ARG_SHOULD_EVAL, RE_ENTER_ERR_CODE)
+'''.format(SHELL_ACTIVATOR_SETUP_ENVVAR, __version__, ARG_SHOULD_EVAL, RE_ENTER_ERR_CODE)
 
     activate_file = os.path.join(get_venv_path(get_working_path()), ACTIVATE_FILE_NAME)
     with open(activate_file, "w") as activate_template_file:
         activate_template_file.write(activate_template)
-
-    if not quiet:
-        click.echo(
-            click.style("Please include the following in your rc file if you want to switch envs:",
-                        fg='green'))
-        click.echo(activate_file)
-
+    
+    # Note: this must be printed to stderr or these statements will be evaluated on switch
+    print_err("Error! Your inenv switch script is out of date.")
+    print_err("Please source the following in your rc file if you want to switch envs:")
+    print_err(activate_file)
+    
+    return False
+    
 
 def init(venv_names, quiet=False):
     """Sets up all the venvs for the project"""
@@ -263,9 +275,9 @@ def init(venv_names, quiet=False):
         venvs = venv_names
     else:
         venvs = parse_ini(ini_path).keys()
-
+    
     map(lambda x: setup_venv(x, verbose=True, quiet=quiet), venvs)
-    setup_inenv_shell_activator(quiet)
+    setup_inenv_shell_activator()
 
 
 def clean(venv_name):
@@ -289,9 +301,10 @@ def run(venv_name, cmd, nobuild=False, verbose=False, quiet=False):
 
 def switch(venv_name):
     """Switch to a different virtual env"""
-    if not os.getenv(SHELL_ACTIVATOR_SETUP_ENVVAR):
-        setup_inenv_shell_activator()
-        sys.exit()
+    if not setup_inenv_shell_activator():
+        # Switch script out of date, so refuse to continue
+        sys.exit(1)
+    
     SHELL = os.getenv('SHELL')
     to_run = ""
     if not venv_exists(venv_name):

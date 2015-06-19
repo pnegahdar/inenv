@@ -76,6 +76,9 @@ def get_venv_path(venv_name):
 def get_execfile_path(venv_name):
     return os.path.join(get_venv_path(venv_name), 'bin/activate_this.py')
 
+def is_subcmd(venv_name):
+    return (venv_name in NORMAL_CMDS) or (venv_name in REENTRANT_CMDS)
+
 
 ### Venv Stuff
 
@@ -138,6 +141,14 @@ def parse_ini(path_to_ini):
 
 
 def venv_exists(venv_name):
+    ini_path = get_ini_path()
+    parsed = parse_ini(ini_path).get(venv_name)
+    if not parsed:
+        exit_with_err("Unable to find venv {} in ini {}".format(venv_name, ini_path))
+
+    if is_subcmd(venv_name):
+        exit_with_err("Cannot use subcommand '{}' as venv name.".format(venv_name))
+        
     exec_path = get_execfile_path(venv_name)
     return os.path.isfile(exec_path)
 
@@ -252,6 +263,7 @@ def init(venv_names, quiet=False):
         venvs = venv_names
     else:
         venvs = parse_ini(ini_path).keys()
+
     map(lambda x: setup_venv(x, verbose=True, quiet=quiet), venvs)
     setup_inenv_shell_activator(quiet)
 
@@ -393,6 +405,9 @@ def main_cli(cmdargs, verbose, nobuild, quiet, help, version):
         init(args, quiet=quiet) 
         return
     elif cmd == 'clean':
+        if not args:
+            exit_with_err('Subcommand clean expects at least 1 argument.')
+        
         map(clean, args)
         return
     elif cmd == 'jump':
@@ -404,6 +419,9 @@ def main_cli(cmdargs, verbose, nobuild, quiet, help, version):
         runall(args, nobuild, verbose, quiet)
         return
     elif cmd == 'run':
+        if not args:
+            exit_with_err('Subcommand run expects arguments.')
+            
         venv = args[0]
         args = args[1:]
         run(venv, args, nobuild, verbose, quiet)

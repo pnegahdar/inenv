@@ -1,6 +1,7 @@
 import copy
 import sys
 import os
+import shutil
 
 import click
 
@@ -26,13 +27,6 @@ def _run(venv_name, cmd):
 
 
 @click.argument('cmd', nargs=-1)
-@main_cli.command()
-def run(venv_name, cmd):
-    """Runs command in venv"""
-    _run(venv_name, cmd)
-
-
-@click.argument('cmd', nargs=-1)
 @click.option('--venv_name', default=None)
 @click.command()
 def switch_or_run(cmd, venv_name=None):
@@ -48,6 +42,14 @@ def switch_or_run(cmd, venv_name=None):
         inenv.clear_extra_source_file()
         inenv.write_extra_source_file("source {}".format(venv.activate_shell_file))
         sys.exit(EVAL_EXIT_CODE)
+
+@click.argument('venv_name')
+@main_cli.command()
+def clean(venv_name):
+    inenv = InenvManager()
+    venv = inenv.get_venv(venv_name)
+    click.confirm("Deleting dir {}".format(venv.path))
+    shutil.rmtree(venv.path)
 
 
 @click.argument('venv_name')

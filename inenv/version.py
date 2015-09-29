@@ -9,4 +9,4 @@
 # Copyright (c) 2015, Parham Negahdar <pnegahdar@gmail.com>
 
 
-__version__ = '0.4'  # NOQA
+__version__ = '0.4.2'  # NOQA

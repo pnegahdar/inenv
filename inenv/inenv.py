@@ -15,8 +15,8 @@ class InenvException(Exception):
 
 
 INENV_ENV_VAR = 'INENV_VERSION'
-EXTRA_SOURCE_NAME = 'inenv_extra.sh'
-ACTIVATE_TEMPLATE_NAME = 'inenv.sh'
+EXTRA_SOURCE_NAME = '.inenv_extra.sh'
+ACTIVATE_TEMPLATE_NAME = '.inenv.sh'
 ACTIVATE_TEMPLATE = '''export {env_var}={version}
 function inenv() {{
     inenv_helper $@
@@ -148,7 +148,6 @@ class InenvManager(object):
         open(self.extra_source_file, 'w+').close()
 
     def write_extra_source_file(self, contents):
-        print self.extra_source_file
         with open(self.extra_source_file, 'w+') as writefile:
             writefile.write(contents)
 

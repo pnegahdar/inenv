@@ -4,7 +4,7 @@ import os
 
 import click
 
-from inenv import InenvManager, INENV_ENV_VAR, EVAL_EXIT_CODE
+from inenv import InenvManager, INENV_ENV_VAR, EVAL_EXIT_CODE, InenvException
 
 
 def activator_warn(inenv):
@@ -28,6 +28,7 @@ def _run(venv_name, cmd):
 @click.argument('cmd', nargs=-1)
 @main_cli.command()
 def run(venv_name, cmd):
+    """Runs command in venv"""
     _run(venv_name, cmd)
 
 
@@ -52,6 +53,7 @@ def switch_or_run(cmd, venv_name=None):
 @click.argument('venv_name')
 @main_cli.command()
 def init(venv_name):
+    """Initializez a virtualenv"""
     inenv = InenvManager()
     inenv.get_prepped_venv(venv_name)
     activator_warn(inenv)
@@ -64,14 +66,17 @@ def extra_source():
 
 
 def run_cli():
-    inenv = InenvManager()
-    for venv in inenv.registered_venvs.keys():
-        new_switch = copy.deepcopy(switch_or_run)
-        for param in new_switch.params:
-            if param.name == 'venv_name':
-                param.default = venv
-        main_cli.add_command(new_switch, name=venv)
-    main_cli(obj={})
+    try:
+        inenv = InenvManager()
+        for venv in inenv.registered_venvs.keys():
+            new_switch = copy.deepcopy(switch_or_run)
+            for param in new_switch.params:
+                if param.name == 'venv_name':
+                    param.default = venv
+            main_cli.add_command(new_switch, name=venv)
+        main_cli(obj={})
+    except InenvException as e:
+        click.echo(click.style("{}".format(e.message), fg='red'))
 
 
 if __name__ == '__main__':

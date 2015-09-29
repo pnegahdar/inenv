@@ -29,13 +29,15 @@ function inenv() {{
 
 
 class InenvManager(object):
-    def __init__(self, ini_path=None, ini_name=INI_NAME, venv_dir_name=VENV_DIR_NAME):
+    def __init__(self, ini_path=None, ini_name=INI_NAME, venv_dir_name=VENV_DIR_NAME,
+                 no_setup=False):
         self.ini_name = ini_name
-        self.venv_dir_name = venv_dir_name
         self.ini_path = ini_path or self.get_closest_ini()
+        self.venv_dir_name = venv_dir_name
         self.parser = ConfigParser.ConfigParser()
         self.registered_venvs = self.parse_ini()
-        self.setup_activator(only_if_dne=True)
+        if not no_setup:
+            self.setup_activator(only_if_dne=True)
 
     def get_closest_ini(self):
         directory = os.path.realpath(os.path.curdir)
@@ -45,7 +47,7 @@ class InenvManager(object):
             if not os.access(directory, os.W_OK):
                 raise InenvException(
                     "Lost permissions walkign up to {}. Unable to find {}".format(directory,
-                                                                                  self.ini_path))
+                                                                                  self.ini_name))
             if os.path.isfile(ini_path):
                 return ini_path
             parent_dir = os.path.realpath(os.path.join(directory, '..'))
@@ -80,7 +82,10 @@ class InenvManager(object):
 
     @property
     def venv_dir(self):
-        return os.path.join(os.path.dirname(self.ini_path), ".inenv/")
+        dir = os.path.join(os.path.dirname(self.ini_path), ".inenv/")
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        return dir
 
     def _fix_venv_name_input(self, venv_name):
         if venv_name in self.registered_venvs:

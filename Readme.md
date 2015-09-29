@@ -15,19 +15,20 @@ Create a config file called `inenv.ini` in your project root directory:
     deps: file:requirements.txt
     
     [service]
-    deps: file:subproject/app/requirements.txt
+    deps: requests==1.4 file:subproject/app/requirements.txt
     
 
 Example Usage (in any directory of the project):
 
     # Initialize inenv
-    inenv init
+    inenv init webproject
     # Note this will tell you to add a file to source in bash, if you want to switch envs in your shell, do this.  
 
     # Switches your current env to webproject
-    inenv webproject
+    inenv webproject python 
   
     inenv service
+    pip freeze
     
 
     # Runs `python manage.py syncdb` in the webproject venv
@@ -35,67 +36,34 @@ Example Usage (in any directory of the project):
     inenv webproject -- python manage.py syncdb --hello 
 
 
-Helps Docs:
+Python Lib:
 
-    Basic usage:
+    from inenv.venv import VirtualEnv
     
-    Usage:
-    1. inenv ENV_NAME OPTIONS
-    Switches to venv ENV_NAME.
+    venv = VirtualEnv('webproject', '/User/.virtualenvs')
+    venv.create_if_dne()
+    venv.delete()
+    venv.create_if_dne()
     
-    2. inenv ENV_NAME OPTIONS -- COMMANDS
-    Runs commands in the specified venv.
-    Alternatively, you can run: inenv run ENV_NAME OPTIONS -- COMMANDS
-
-    3. inenv runall OPTIONS -- COMMANDS
-    Runs commands in all existing venvs.
+    venv.install_requirements_file('requirements.txt')
+    venv.install_deps(['requests==2.0'])
     
-    4. inenv SUB_COMMAND ARGS OPTIONS
-    See list of sub-commands.
+    venv.activate()
+    subprocess.check_output(['pip','freeze'])
+    venv.deactivate()
+    subprocess.check_output(['pip','freeze'])
     
-    Options:
-      --help, -h: Print the help message and exit
-      --quiet, -q: Does not print anything to stdout.
-      --verbose, -v: Prints output of installations
-      --nobuild, -n: Does not install packages
+    venv.run(['pip','freeze'])
     
-    Sub-commands:
-      init ENV_NAME_1 ENV_NAME_2 Etc.:
-           Initializes all listed venvs.
-           If no venvs are listed, it initializes all of them.
+    with  VirtualEnv('webproject', '/User/.virtualenvs') as venv:
+        subprocess.check_output('python --version')
+        
     
-      clean ENV_NAME_1 ENV_NAME_2 Etc.:
-           Deletes the listed venvs to start over.
+    from inenv.inenv import InenvManager
+    
+    manager = InenvManager("/project/inenv.ini") # file optional will look for one
+    venv = manager.get_prepped_venv('webproject')
+    # Sase as VirtualEnv above
+    
+    
 
-      jump ENV_NAME:
-           Jumps to the directory of the requirements.txt file and
-           switches to ENV_NAME.
-
-
-
-
-### Config File ###
-
-Config format:
-
-    [envname:<env_var_conditional>]
-    deps: (file:)<deplist>, more deps...
-
-
-
-Sample config:
-
-    [app1]
-    deps: scipy==1.2.1, file:requirements.txt # Relative paths are from the position of the ini file
-
-    [app1:jenkins] # Only used in bool(os.getenv('jenkins')) == True
-    deps: scipy==1.4
-
-    [app2]
-    deps: file:my/sub/dir/requirements.txt
-
-
-
-### Setup/Deveop ###
-
-Clone repo, run `make setup`, test with `make test`

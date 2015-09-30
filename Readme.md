@@ -67,3 +67,27 @@ Python Lib:
     
     
 
+Fun (dont do this... unreliable and dangerous): 
+
+    from inenv.venv import VirtualEnv
+
+    try:
+       import django
+    except ImportError:
+       print "couldn't import django"
+
+    test_venv = VirtualEnv('test1', '/Users/pnegahdar/.venvs')
+    test_venv.create_if_dne()
+    test_venv.install_deps(['django==1.7'])
+
+    test_venv2 = VirtualEnv('test2', '/Users/pnegahdar/.venvs')
+    test_venv2.create_if_dne()
+    test_venv2.install_deps(['django==1.8'])
+
+    with test_venv:
+       import django
+       print django.get_version() # 1.7
+
+    with test_venv2:
+       reload(django)
+       print django.get_version() # 1.8

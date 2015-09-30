@@ -1,18 +1,18 @@
 import hashlib
 import json
-import os
 import shutil
 import subprocess
 import sys
+import os
+import copy
 
-from pip import parseopts
-from pip.commands.install import InstallCommand
 from virtualenv import create_environment
 from virtualenv import path_locations
 
 
 def file_md5(path):
     return hashlib.md5(open(path, 'rb').read()).hexdigest()
+
 
 class VirtualEnv(object):
     execfile_name = 'activate_this.py'
@@ -22,7 +22,8 @@ class VirtualEnv(object):
         self.venv_dirs = venv_dirs
         self.old_path = os.environ.get('PATH', '')
         self.sys_prefix = sys.prefix
-        self.sys_path = sys.path
+        self.sys_path = copy.copy(sys.path)
+
 
     @property
     def path(self):
@@ -68,8 +69,7 @@ class VirtualEnv(object):
         shutil.rmtree(self.path)
 
     def install_requirements_file(self, path_to_file):
-        cmd, args = parseopts(['install', '-r', path_to_file])
-        InstallCommand().main(args)
+        self.run(['pip', 'install', '-r', path_to_file])
 
     def install_requirements_file_with_cache(self, path_to_file):
         cache_contents = self.load_cache_file()
@@ -85,8 +85,7 @@ class VirtualEnv(object):
             self.save_cache_file(cache_contents)
 
     def install_deps(self, deps):
-        cmd, args = parseopts(['install'] + list(deps))
-        InstallCommand().main(args)
+        self.run(['pip', 'install'] + list(deps))
 
     def install_deps_with_cache(self, deps):
         cache_contents = self.load_cache_file()
@@ -108,22 +107,23 @@ class VirtualEnv(object):
             self.create()
         execfile(self.execfile_path, dict(__file__=self.execfile_path))
 
-    def deactivate(self, sys_path=None, sys_prefix=None, old_path=None):
-        sys.path = sys_path or self.sys_path
-        sys.prefix = sys_prefix or self.sys_prefix
-        os.environ['PATH'] = old_path or self.old_path
-
     def __enter__(self):
         self.activate()
 
     def __exit__(self, *exc_info):
         self.deactivate()
 
+    def deactivate(self, sys_path=None, sys_prefix=None, old_path=None):
+        sys.path = sys_path or self.sys_path
+        sys.prefix = sys_prefix or self.sys_prefix
+        os.environ['PATH'] = old_path or self.old_path
+
     def run(self, args, exit=False, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr):
-        with self:
-            process = subprocess.Popen(args, stdin=stdin, stdout=stdout, stderr=stderr)
-            exit_code = process.wait()
+        self.activate()
+        process = subprocess.Popen(args, stdin=stdin, stdout=stdout, stderr=stderr)
+        exit_code = process.wait()
         if exit:
             sys.exit(exit_code)
+        self.deactivate()
         return exit_code
 

@@ -48,7 +48,7 @@ def switch_or_run(cmd, venv_name=None):
 def clean(venv_name):
     inenv = InenvManager()
     venv = inenv.get_venv(venv_name)
-    click.confirm("Deleting dir {}".format(venv.path))
+    click.confirm("Delete dir {}".format(venv.path))
     shutil.rmtree(venv.path)
 
 

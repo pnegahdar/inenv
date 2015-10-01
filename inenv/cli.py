@@ -1,9 +1,10 @@
 import copy
 import sys
 import shutil
-
 import os
+
 import click
+
 from inenv import InenvManager, INENV_ENV_VAR, EVAL_EXIT_CODE, InenvException
 import version
 
@@ -82,6 +83,14 @@ def extra_source():
     print inenv.extra_source_file
 
 
+@main_cli.command()
+@click.argument('cmd', nargs=-1)
+# Backwards compatibility
+def should_eval(cmd):
+    InenvManager()
+    click.echo(click.style("Inenv has been upgrade please start a new shell session.", fg='red'))
+
+
 @main_cli.command('version')
 def print_version():
     print version.__version__
@@ -89,7 +98,7 @@ def print_version():
 
 def run_cli():
     try:
-        inenv = InenvManager()
+        inenv = InenvManager(no_setup=True)
         for venv in inenv.registered_venvs.keys():
             new_switch = copy.deepcopy(switch_or_run)
             for param in new_switch.params:

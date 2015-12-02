@@ -67,7 +67,7 @@ class InenvCliGroup(click.Group):
                 formatter.write_dl(core_commands)
 
         if inenv_commands:
-            with formatter.section('Venvs'):
+            with formatter.section('Inenvs'):
                 formatter.write_dl(inenv_commands)
 
 
@@ -122,8 +122,10 @@ def rm(venv_name):
 def init(venv_name):
     """Initializez a virtualenv"""
     inenv = InenvManager()
-    inenv.get_prepped_venv(venv_name)
-    activator_warn(inenv)
+    inenv.get_prepped_venv(venv_name, skip_cached=False)
+    if not os.getenv(INENV_ENV_VAR):
+        activator_warn(inenv)
+    click.echo(click.style("Your venv is ready. Enjoy!", fg='green'))
 
 
 @main_cli.command()

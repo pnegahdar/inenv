@@ -4,6 +4,7 @@ import os
 from venv import VirtualEnv
 from version import __version__
 
+
 INI_NAME = 'inenv.ini'
 VENV_DIR_NAME = '.inenv'
 RECURSION_LIMIT = 100
@@ -120,7 +121,7 @@ class InenvManager(object):
             return path
         return os.path.normpath(os.path.join(os.path.dirname(self.ini_path), path))
 
-    def install_deps(self, virtualenv):
+    def install_deps(self, virtualenv, skip_cached=True):
         """
 
         :param virtualenv:
@@ -128,24 +129,22 @@ class InenvManager(object):
         :return:
         """
         config = self.registered_venvs[virtualenv.venv_name]
-        inline_deps = []
-        for dep in config['deps']:
+        configed_deps = config['deps']
+        for i, dep in enumerate(configed_deps):
             if dep.startswith(FILE_DEP_PREFIX):
                 dep = self._full_relative_path(dep.replace(FILE_DEP_PREFIX, ''))
-                virtualenv.install_requirements_file_with_cache(dep)
+                virtualenv.install_requirements_file(dep, skip_cached=skip_cached)
             else:
-                inline_deps.append(dep)
-        if inline_deps:
-            virtualenv.install_deps_with_cache(inline_deps)
+                virtualenv.install_deps([dep], skip_cached=skip_cached)
 
     def guess_contents_dir(self, venv_name):
         venv = self.registered_venvs[venv_name]
         return venv['root']
 
-    def get_prepped_venv(self, venv_name):
+    def get_prepped_venv(self, venv_name, skip_cached=True):
         venv = self.get_venv(venv_name)
         venv.create_if_dne()
-        self.install_deps(venv)
+        self.install_deps(venv, skip_cached=skip_cached)
         return venv
 
     @property

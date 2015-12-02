@@ -93,6 +93,8 @@ class InenvManager(object):
                 if dep.startswith(FILE_DEP_PREFIX):
                     data['root'] = self._full_relative_path(
                         os.path.dirname(dep.replace(FILE_DEP_PREFIX, '')))
+        if not data['root']:
+            data['root'] = self.ini_path
         return data
 
     @property

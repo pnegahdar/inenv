@@ -19,6 +19,7 @@ deps: file:requirements.txt
     
 [service]
 deps: requests==1.4 file:subproject/app/requirements.txt
+root: subproject/app # Optional, used by autojump
 ```
 
 Example Usage (in any directory of the project):
@@ -30,6 +31,9 @@ inenv init webproject
 
 # Switches your current env to webproject
 inenv webproject python 
+
+# Autojump 
+inenv autojump # Toggles autojump
  
 inenv service
 pip freeze
@@ -67,7 +71,7 @@ from inenv.inenv import InenvManager
     
 manager = InenvManager("/project/inenv.ini") # file optional will look for one
 venv = manager.get_prepped_venv('webproject')
-# Sase as VirtualEnv above
+# Same as VirtualEnv above
 ```
 
 Fun (don't do this; it's unreliable and dangerous): 

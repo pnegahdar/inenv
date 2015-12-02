@@ -94,7 +94,7 @@ class InenvManager(object):
                     data['root'] = self._full_relative_path(
                         os.path.dirname(dep.replace(FILE_DEP_PREFIX, '')))
         if not data['root']:
-            data['root'] = self.ini_path
+            data['root'] = os.path.dirname(self.ini_path)
         return data
 
     @property

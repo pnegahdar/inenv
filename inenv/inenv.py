@@ -1,8 +1,9 @@
 import ConfigParser
-
 import os
+
 from venv import VirtualEnv
 from version import __version__
+
 
 INI_NAME = 'inenv.ini'
 VENV_DIR_NAME = '.inenv'
@@ -15,31 +16,36 @@ class InenvException(Exception):
 
 
 INENV_ENV_VAR = 'INENV_VERSION'
-EXTRA_SOURCE_NAME = '.inenv_extra.sh'
-ACTIVATE_TEMPLATE_NAME = '.inenv.sh'
+EXTRA_SOURCE_NAME = 'inenv_extra.sh'
+ACTIVATE_TEMPLATE_NAME = 'inenv.sh'
+FILE_DEP_PREFIX = 'file:'
 ACTIVATE_TEMPLATE = '''export {env_var}={version}
 function inenv() {{
     inenv_helper $@
     rc=$?
     if [[ $rc == \'{eval_exit_code}\' ]]; then
-        `cat $(inenv_helper extra_source)`
+        source $(inenv_helper extra_source)
     fi
 }}
 '''.format(env_var=INENV_ENV_VAR, version=__version__, eval_exit_code=EVAL_EXIT_CODE)
+INENV_CONFIG_DIR = os.path.expanduser("~/.config/inenv/")
+if not os.path.isdir(INENV_CONFIG_DIR):
+    os.makedirs(INENV_CONFIG_DIR)
+AUTOJUMP_FILE = os.path.join(INENV_CONFIG_DIR, 'autojump')
 
 
 class InenvManager(object):
     def __init__(self, ini_path=None, ini_name=INI_NAME, venv_dir_name=VENV_DIR_NAME,
                  no_setup=False):
         self.ini_name = ini_name
-        self.ini_path = ini_path or self.get_closest_ini()
+        self.ini_path = ini_path or self._get_closest_ini()
         self.venv_dir_name = venv_dir_name
         self.parser = ConfigParser.ConfigParser()
-        self.registered_venvs = self.parse_ini()
+        self.registered_venvs = self._parse_ini()
         if not no_setup:
-            self.setup_activator(only_if_dne=True)
+            self.setup_activator()
 
-    def get_closest_ini(self):
+    def _get_closest_ini(self):
         directory = os.path.realpath(os.path.curdir)
         x = RECURSION_LIMIT
         while x > 0:
@@ -59,7 +65,7 @@ class InenvManager(object):
             x -= 1
         raise InenvException("Recursion limit exceeded unable to find inenv.ini")
 
-    def parse_ini(self):
+    def _parse_ini(self):
         venv_sections = {}
         with open(self.ini_path) as parse_file:
             try:
@@ -67,17 +73,26 @@ class InenvManager(object):
             except ConfigParser.ParsingError:
                 raise InenvException("Unable to parse ini file {}".format(self.ini_path))
         for venv_name in self.parser.sections():
-            data = self.parse_section(venv_name)
+            data = self._parse_section(venv_name)
             venv_sections[venv_name] = data
         return venv_sections
 
-    def parse_section(self, section):
-        data = {'deps': []}
+    def _parse_section(self, section):
+        data = {'deps': [], 'root': ''}
+        # Parse the deps
         try:
-            deps = [dep for dep in self.parser.get(section, 'deps').replace(',', '').split()]
-            data['deps'] += deps
+            data['deps'] += self.parser.get(section, 'deps').replace(',', '').split()
         except ConfigParser.NoOptionError:
             pass
+        # Parse the root
+        try:
+            data['root'] = self._full_relative_path(self.parser.get(section, 'root').strip())
+        except ConfigParser.NoOptionError:
+            # No root set, guess using requirements.txt
+            for dep in data['deps']:
+                if dep.startswith(FILE_DEP_PREFIX):
+                    data['root'] = self._full_relative_path(
+                        os.path.dirname(dep.replace(FILE_DEP_PREFIX, '')))
         return data
 
     @property
@@ -106,7 +121,7 @@ class InenvManager(object):
             return path
         return os.path.normpath(os.path.join(os.path.dirname(self.ini_path), path))
 
-    def install_deps(self, virtualenv):
+    def install_deps(self, virtualenv, skip_cached=True):
         """
 
         :param virtualenv:
@@ -114,20 +129,22 @@ class InenvManager(object):
         :return:
         """
         config = self.registered_venvs[virtualenv.venv_name]
-        inline_deps = []
-        for dep in config['deps']:
-            if dep.startswith('file:'):
-                dep = self._full_relative_path(dep.split('file:')[1])
-                virtualenv.install_requirements_file_with_cache(dep)
+        configed_deps = config['deps']
+        for i, dep in enumerate(configed_deps):
+            if dep.startswith(FILE_DEP_PREFIX):
+                dep = self._full_relative_path(dep.replace(FILE_DEP_PREFIX, ''))
+                virtualenv.install_requirements_file(dep, skip_cached=skip_cached)
             else:
-                inline_deps.append(dep)
-        if inline_deps:
-            virtualenv.install_deps_with_cache(inline_deps)
+                virtualenv.install_deps([dep], skip_cached=skip_cached)
 
-    def get_prepped_venv(self, venv_name):
+    def guess_contents_dir(self, venv_name):
+        venv = self.registered_venvs[venv_name]
+        return venv['root']
+
+    def get_prepped_venv(self, venv_name, skip_cached=True):
         venv = self.get_venv(venv_name)
         venv.create_if_dne()
-        self.install_deps(venv)
+        self.install_deps(venv, skip_cached=skip_cached)
         return venv
 
     @property
@@ -148,6 +165,20 @@ class InenvManager(object):
         open(self.extra_source_file, 'w+').close()
 
     def write_extra_source_file(self, contents):
-        with open(self.extra_source_file, 'w+') as writefile:
-            writefile.write(contents)
+        with open(self.extra_source_file, 'a') as writefile:
+            writefile.write(contents + '\n')
+
+
+def autojump_enabled():
+    """ Returns whehter autojump is enabled"""
+    return os.path.isfile(AUTOJUMP_FILE)
+
+
+def toggle_autojump():
+    """Toggles Autojump"""
+    if not autojump_enabled():
+        with open(AUTOJUMP_FILE, 'w+') as ajfile:
+            ajfile.write("enabled")
+    else:
+        os.remove(AUTOJUMP_FILE)
 

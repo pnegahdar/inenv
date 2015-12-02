@@ -2,12 +2,13 @@ import hashlib
 import json
 import shutil
 import subprocess
-import sys
 import os
 import copy
 
 from virtualenv import create_environment
 from virtualenv import path_locations
+
+import sys
 
 
 def file_md5(path):
@@ -68,35 +69,29 @@ class VirtualEnv(object):
     def delete(self):
         shutil.rmtree(self.path)
 
-    def install_requirements_file(self, path_to_file):
-        self.run(['pip', 'install', '-r', path_to_file])
-
-    def install_requirements_file_with_cache(self, path_to_file):
+    def install_requirements_file(self, path_to_file, skip_cached=True):
         cache_contents = self.load_cache_file()
         file_cache = cache_contents.get('file_cache', {})
         cached_md5 = file_cache.get(path_to_file)
         calculated_md5 = file_md5(path_to_file)
-        if cached_md5 and cached_md5 == calculated_md5:
+        if cached_md5 and cached_md5 == calculated_md5 and skip_cached:
             return
         else:
-            self.install_requirements_file(path_to_file)
+            self.run(['pip', 'install', '-r', path_to_file], exit_if_failed=True)
             file_cache[path_to_file] = calculated_md5
             cache_contents['file_cache'] = file_cache
             self.save_cache_file(cache_contents)
 
-    def install_deps(self, deps):
-        self.run(['pip', 'install'] + list(deps))
-
-    def install_deps_with_cache(self, deps):
+    def install_deps(self, deps, skip_cached=True):
         cache_contents = self.load_cache_file()
         cached_deps = cache_contents.get('dep_cache', {})
-        deps_to_install = [dep for dep in list(deps) if not cached_deps.get(dep)]
+        deps_to_install = [dep for dep in list(deps) if not (cached_deps.get(dep) and skip_cached)]
         if deps_to_install:
-            self.install_deps(deps_to_install)
-        for dep in deps_to_install:
-            cached_deps[dep] = True
-            cache_contents['dep_cache'] = cached_deps
-            self.save_cache_file(cache_contents)
+            self.run(['pip', 'install'] + list(deps), exit_if_failed=True)
+            for dep in deps_to_install:
+                cached_deps[dep] = True
+                cache_contents['dep_cache'] = cached_deps
+        self.save_cache_file(cache_contents)
 
     @property
     def activate_shell_file(self):
@@ -118,11 +113,12 @@ class VirtualEnv(object):
         sys.prefix = sys_prefix or self.sys_prefix
         os.environ['PATH'] = old_path or self.old_path
 
-    def run(self, args, exit=False, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr):
+    def run(self, args, exit=False, exit_if_failed=False, stdin=sys.stdin, stdout=sys.stdout,
+            stderr=sys.stderr):
         self.activate()
         process = subprocess.Popen(args, stdin=stdin, stdout=stdout, stderr=stderr)
         exit_code = process.wait()
-        if exit:
+        if exit or (exit_if_failed and exit_code != 0):
             sys.exit(exit_code)
         self.deactivate()
         return exit_code

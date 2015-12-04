@@ -32,6 +32,7 @@ INENV_CONFIG_DIR = os.path.expanduser("~/.config/inenv/")
 if not os.path.isdir(INENV_CONFIG_DIR):
     os.makedirs(INENV_CONFIG_DIR)
 AUTOJUMP_FILE = os.path.join(INENV_CONFIG_DIR, 'autojump')
+ENV_VAR_DELIMITER = "="
 
 
 class InenvManager(object):
@@ -79,7 +80,7 @@ class InenvManager(object):
         return venv_sections
 
     def _parse_section(self, section):
-        data = {'deps': [], 'root': '', 'env' : {}}
+        data = {'deps': [], 'root': '', 'env': {}}
         # Parse the deps
         try:
             data['deps'] += self.parser.get(section, 'deps').replace(',', ' ').split()
@@ -94,19 +95,19 @@ class InenvManager(object):
                 if dep.startswith(FILE_DEP_PREFIX):
                     data['root'] = self._full_relative_path(
                         os.path.dirname(dep.replace(FILE_DEP_PREFIX, '')))
-
-        # Parse the env
-        try:
-            unparsed_env = self.parser.get(section, 'deps').replace(',', '').split()
-            env =
-        except ConfigParser.NoOptionError:
-            # No root set, guess using requirements.txt
-            for dep in data['deps']:
-                if dep.startswith(FILE_DEP_PREFIX):
-                    data['root'] = self._full_relative_path(
-                        os.path.dirname(dep.replace(FILE_DEP_PREFIX, '')))
         if not data['root']:
             data['root'] = os.path.dirname(self.ini_path)
+        # Parse the env
+        try:
+            env = dict([each.split(ENV_VAR_DELIMITER) for each in
+                        self.parser.get(section, 'env').replace(',', '').split()])
+        except ConfigParser.NoOptionError:
+            env = {}
+        except ValueError:
+            raise InenvException(
+                "Unable to parse ini file env section. Use space separated K{}V pairs.".format(
+                    ENV_VAR_DELIMITER))
+        data['env'] = env
         return data
 
     @property
@@ -155,7 +156,11 @@ class InenvManager(object):
         venv = self.registered_venvs[venv_name]
         return venv['root']
 
-    def get_prepped_venv(self, venv_name, skip_cached=True):
+    def get_envvars(self, venv_name):
+        venv = self.registered_venvs[venv_name]
+        return venv['env']
+
+    def get_prepped_venv(self, venv_name, skip_cached=True, env=None):
         venv = self.get_venv(venv_name)
         venv.create_if_dne()
         self.install_deps(venv, skip_cached=skip_cached)

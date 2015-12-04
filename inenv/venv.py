@@ -4,11 +4,10 @@ import shutil
 import subprocess
 import os
 import copy
+import sys
 
 from virtualenv import create_environment
 from virtualenv import path_locations
-
-import sys
 
 
 def file_md5(path):
@@ -18,12 +17,13 @@ def file_md5(path):
 class VirtualEnv(object):
     execfile_name = 'activate_this.py'
 
-    def __init__(self, venv_name, venv_dirs):
+    def __init__(self, venv_name, venv_dirs, addon_env_vars=None):
         self.venv_name = venv_name
         self.venv_dirs = venv_dirs
-        self.old_path = os.environ.get('PATH', '')
         self.sys_prefix = sys.prefix
         self.sys_path = copy.copy(sys.path)
+        self.original_os_environ = os.environ.copy()
+        self.addon_env_vars = addon_env_vars or {}
 
 
     @property
@@ -100,18 +100,20 @@ class VirtualEnv(object):
     def activate(self):
         if not self.exists:
             self.create()
+        if self.addon_env_vars:
+            os.environ = dict(self.original_os_environ.items() + self.addon_env_vars.items())
         execfile(self.execfile_path, dict(__file__=self.execfile_path))
+
+    def deactivate(self):
+        sys.path = self.sys_path
+        sys.prefix = self.sys_prefix
+        os.environ = self.original_os_environ
 
     def __enter__(self):
         self.activate()
 
     def __exit__(self, *exc_info):
         self.deactivate()
-
-    def deactivate(self, sys_path=None, sys_prefix=None, old_path=None):
-        sys.path = sys_path or self.sys_path
-        sys.prefix = sys_prefix or self.sys_prefix
-        os.environ['PATH'] = old_path or self.old_path
 
     def run(self, args, exit=False, exit_if_failed=False, stdin=sys.stdin, stdout=sys.stdout,
             stderr=sys.stderr):

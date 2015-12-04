@@ -1,12 +1,13 @@
 import copy
 import shutil
 import os
+import sys
 
 import click
 
-import sys
 from inenv import (InenvManager, INENV_ENV_VAR, EVAL_EXIT_CODE, InenvException,
                    autojump_enabled, toggle_autojump)
+from utils import override_envars_and_deactivate
 import version
 
 
@@ -100,6 +101,7 @@ def switch_or_run(cmd, venv_name=None):
         venv = inenv.get_prepped_venv(venv_name)
         inenv.clear_extra_source_file()
         inenv.write_extra_source_file("source {}".format(venv.activate_shell_file))
+        inenv.write_extra_source_file(override_envars_and_deactivate(inenv.get_envvars(venv_name)))
         if autojump_enabled():
             dir = inenv.guess_contents_dir(venv_name)
             inenv.write_extra_source_file('cd {}'.format(dir))
@@ -162,7 +164,7 @@ def run_cli():
                     param.default = venv
             main_cli.add_command(new_switch, name=venv, sort_later=True)
     except InenvException as e:
-        pass
+        raise
     try:
         main_cli(obj={}, prog_name="inenv")
     except InenvException as e:

@@ -32,28 +32,30 @@ INENV_CONFIG_DIR = os.path.expanduser("~/.config/inenv/")
 if not os.path.isdir(INENV_CONFIG_DIR):
     os.makedirs(INENV_CONFIG_DIR)
 AUTOJUMP_FILE = os.path.join(INENV_CONFIG_DIR, 'autojump')
+ENV_VAR_DELIMITER = "="
 
 
 class InenvManager(object):
     def __init__(self, ini_path=None, ini_name=INI_NAME, venv_dir_name=VENV_DIR_NAME,
-                 no_setup=False):
+                 no_setup=False, search_start_dir=None):
         self.ini_name = ini_name
-        self.ini_path = ini_path or self._get_closest_ini()
+        self.ini_path = ini_path or self.find_closest_ini(search_start_dir)
         self.venv_dir_name = venv_dir_name
         self.parser = ConfigParser.ConfigParser()
         self.registered_venvs = self._parse_ini()
         if not no_setup:
             self.setup_activator()
 
-    def _get_closest_ini(self):
-        directory = os.path.realpath(os.path.curdir)
+    @staticmethod
+    def find_closest_ini(start_dir=None, ini_name=INI_NAME):
+        directory = start_dir or os.path.realpath(os.path.curdir)
         x = RECURSION_LIMIT
         while x > 0:
-            ini_path = os.path.join(directory, self.ini_name)
+            ini_path = os.path.join(directory, ini_name)
             if not os.access(directory, os.W_OK):
                 raise InenvException(
                     "Lost permissions walkign up to {}. Unable to find {}".format(directory,
-                                                                                  self.ini_name))
+                                                                                  ini_name))
             if os.path.isfile(ini_path):
                 return ini_path
             parent_dir = os.path.realpath(os.path.join(directory, '..'))
@@ -78,10 +80,10 @@ class InenvManager(object):
         return venv_sections
 
     def _parse_section(self, section):
-        data = {'deps': [], 'root': ''}
+        data = {'deps': [], 'root': '', 'env': {}}
         # Parse the deps
         try:
-            data['deps'] += self.parser.get(section, 'deps').replace(',', '').split()
+            data['deps'] += self.parser.get(section, 'deps').replace(',', ' ').split()
         except ConfigParser.NoOptionError:
             pass
         # Parse the root
@@ -95,6 +97,17 @@ class InenvManager(object):
                         os.path.dirname(dep.replace(FILE_DEP_PREFIX, '')))
         if not data['root']:
             data['root'] = os.path.dirname(self.ini_path)
+        # Parse the env
+        try:
+            env = dict([each.split(ENV_VAR_DELIMITER) for each in
+                        self.parser.get(section, 'env').replace(',', '').split()])
+        except ConfigParser.NoOptionError:
+            env = {}
+        except ValueError:
+            raise InenvException(
+                "Unable to parse ini file env section. Use space separated K{}V pairs.".format(
+                    ENV_VAR_DELIMITER))
+        data['env'] = env
         return data
 
     @property
@@ -143,7 +156,11 @@ class InenvManager(object):
         venv = self.registered_venvs[venv_name]
         return venv['root']
 
-    def get_prepped_venv(self, venv_name, skip_cached=True):
+    def get_envvars(self, venv_name):
+        venv = self.registered_venvs[venv_name]
+        return venv['env']
+
+    def get_prepped_venv(self, venv_name, skip_cached=True, env=None):
         venv = self.get_venv(venv_name)
         venv.create_if_dne()
         self.install_deps(venv, skip_cached=skip_cached)

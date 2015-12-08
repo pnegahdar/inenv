@@ -5,20 +5,19 @@ from venv import VirtualEnv
 from version import __version__
 
 
-INI_NAME = 'inenv.ini'
-VENV_DIR_NAME = '.inenv'
-RECURSION_LIMIT = 100
-EVAL_EXIT_CODE = 200
-
-
 class InenvException(Exception):
     pass
 
 
+INI_NAME = 'inenv.ini'
+VENV_DIR_NAME = '.inenv'
+RECURSION_LIMIT = 100
+EVAL_EXIT_CODE = 200
 INENV_ENV_VAR = 'INENV_VERSION'
 EXTRA_SOURCE_NAME = 'inenv_extra.sh'
 ACTIVATE_TEMPLATE_NAME = 'inenv.sh'
-FILE_DEP_PREFIX = 'file:'
+FILE_PREFIX = 'file:'
+DIR_PREFIX = 'dir:'
 ACTIVATE_TEMPLATE = '''export {env_var}={version}
 function inenv() {{
     inenv_helper $@
@@ -92,15 +91,20 @@ class InenvManager(object):
         except ConfigParser.NoOptionError:
             # No root set, guess using requirements.txt
             for dep in data['deps']:
-                if dep.startswith(FILE_DEP_PREFIX):
+                if dep.startswith(FILE_PREFIX):
                     data['root'] = self._full_relative_path(
-                        os.path.dirname(dep.replace(FILE_DEP_PREFIX, '')))
+                        os.path.dirname(dep.replace(FILE_PREFIX, '')))
         if not data['root']:
             data['root'] = os.path.dirname(self.ini_path)
         # Parse the env
         try:
             env = dict([each.split(ENV_VAR_DELIMITER) for each in
                         self.parser.get(section, 'env').replace(',', '').split()])
+            # Correct relative paths
+            for k, v in env.items():
+                if v.startswith(FILE_PREFIX) or v.startswith(DIR_PREFIX):
+                    env[k] = self._full_relative_path(
+                        v.replace(FILE_PREFIX, '').replace(DIR_PREFIX, ''))
         except ConfigParser.NoOptionError:
             env = {}
         except ValueError:
@@ -127,9 +131,10 @@ class InenvManager(object):
 
     def get_venv(self, venv_name):
         venv_name = self._fix_venv_name_input(venv_name)
-        if venv_name not in self.registered_venvs:
+        venv_info = self.registered_venvs.get(venv_name)
+        if not venv_info:
             raise InenvException("Venv {} not in config file {}".format(venv_name, self.ini_path))
-        return VirtualEnv(venv_name, self.venv_dir)
+        return VirtualEnv(venv_name, self.venv_dir, addon_env_vars=venv_info['env'])
 
     def _full_relative_path(self, path):
         if os.path.isabs(path):
@@ -146,8 +151,8 @@ class InenvManager(object):
         config = self.registered_venvs[virtualenv.venv_name]
         configed_deps = config['deps']
         for i, dep in enumerate(configed_deps):
-            if dep.startswith(FILE_DEP_PREFIX):
-                dep = self._full_relative_path(dep.replace(FILE_DEP_PREFIX, ''))
+            if dep.startswith(FILE_PREFIX):
+                dep = self._full_relative_path(dep.replace(FILE_PREFIX, ''))
                 virtualenv.install_requirements_file(dep, skip_cached=skip_cached)
             else:
                 virtualenv.install_deps([dep], skip_cached=skip_cached)

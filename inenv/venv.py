@@ -118,7 +118,7 @@ class VirtualEnv(object):
     def run(self, args, always_exit=False, exit_if_failed=False, stdin=sys.stdin, stdout=sys.stdout,
             stderr=sys.stderr):
         self.activate()
-        process = subprocess.Popen(args, stdin=stdin, stdout=stdout, stderr=stderr)
+        process = subprocess.Popen(args, stdin=stdin, stdout=stdout, stderr=stderr, env=os.environ)
         exit_code = process.wait()
         if always_exit or (exit_if_failed and exit_code != 0):
             sys.exit(exit_code)

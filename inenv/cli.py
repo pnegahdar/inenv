@@ -83,7 +83,7 @@ def _run(venv_name, cmd):
         cmd = cmd[0].split()
     inenv = InenvManager()
     venv = inenv.get_prepped_venv(venv_name)
-    venv.run(cmd, exit=True)
+    venv.run(cmd, always_exit=True)
 
 
 @click.argument('cmd', nargs=-1)

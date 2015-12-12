@@ -36,7 +36,6 @@ class InenvCliGroup(click.Group):
         if sort_later:
             self.sort_later.add(name)
 
-
     def list_commands(self, ctx):
         core_commands, sort_later_commands = [], []
         for k, v in self.commands.items():
@@ -121,6 +120,16 @@ def rm(venv_name):
 
 @click.argument('venv_name')
 @main_cli.command()
+def root(venv_name):
+    """ Removes the venv by name """
+    inenv = InenvManager()
+    inenv.get_venv(venv_name)
+    venv = inenv.registered_venvs[venv_name]
+    click.echo(venv['root'])
+
+
+@click.argument('venv_name')
+@main_cli.command()
 def init(venv_name):
     """Initializez a virtualenv"""
     inenv = InenvManager()
@@ -163,9 +172,6 @@ def run_cli():
                 if param.name == 'venv_name':
                     param.default = venv
             main_cli.add_command(new_switch, name=venv, sort_later=True)
-    except InenvException as e:
-        raise
-    try:
         main_cli(obj={}, prog_name="inenv")
     except InenvException as e:
         click.echo(click.style("{}".format(e.message), fg='red'))
@@ -173,6 +179,3 @@ def run_cli():
 
 if __name__ == '__main__':
     run_cli()
-
-
-

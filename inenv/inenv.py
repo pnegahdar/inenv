@@ -1,5 +1,6 @@
 import ConfigParser
 import os
+import sys
 
 from venv import VirtualEnv
 from version import __version__
@@ -141,21 +142,24 @@ class InenvManager(object):
             return path
         return os.path.normpath(os.path.join(os.path.dirname(self.ini_path), path))
 
-    def install_deps(self, virtualenv, skip_cached=True):
+    def install_deps(self, virtualenv, skip_cached=True, always_exit=False, exit_if_failed=True,
+                     stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr):
         """
-
-        :param virtualenv:
         :type virtualenv: VirtualEnv
-        :return:
         """
         config = self.registered_venvs[virtualenv.venv_name]
         configed_deps = config['deps']
         for i, dep in enumerate(configed_deps):
             if dep.startswith(FILE_PREFIX):
                 dep = self._full_relative_path(dep.replace(FILE_PREFIX, ''))
-                virtualenv.install_requirements_file(dep, skip_cached=skip_cached)
+                virtualenv.install_requirements_file(dep, skip_cached=skip_cached,
+                                                     always_exit=always_exit,
+                                                     exit_if_failed=exit_if_failed, stdin=stdin,
+                                                     stdout=stdout, stderr=stderr)
             else:
-                virtualenv.install_deps([dep], skip_cached=skip_cached)
+                virtualenv.install_deps([dep], skip_cached=skip_cached, always_exit=always_exit,
+                                        exit_if_failed=exit_if_failed, stdin=stdin,
+                                        stdout=stdout, stderr=stderr)
 
     def guess_contents_dir(self, venv_name):
         venv = self.registered_venvs[venv_name]
@@ -165,10 +169,14 @@ class InenvManager(object):
         venv = self.registered_venvs[venv_name]
         return venv['env']
 
-    def get_prepped_venv(self, venv_name, skip_cached=True, env=None):
+    def get_prepped_venv(self, venv_name, skip_cached=True, always_exit=False,
+                         exit_if_failed=True, stdin=sys.stdin, stdout=sys.stdout,
+                         stderr=sys.stderr):
         venv = self.get_venv(venv_name)
         venv.create_if_dne()
-        self.install_deps(venv, skip_cached=skip_cached)
+        self.install_deps(venv, skip_cached=skip_cached, always_exit=always_exit,
+                          exit_if_failed=exit_if_failed, stdin=stdin,
+                          stdout=stdout, stderr=stderr)
         return venv
 
     @property

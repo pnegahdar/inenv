@@ -69,7 +69,9 @@ class VirtualEnv(object):
     def delete(self):
         shutil.rmtree(self.path)
 
-    def install_requirements_file(self, path_to_file, skip_cached=True):
+    def install_requirements_file(self, path_to_file, skip_cached=True, always_exit=False,
+                                  exit_if_failed=True, stdin=sys.stdin, stdout=sys.stdout,
+                                  stderr=sys.stderr):
         cache_contents = self.load_cache_file()
         file_cache = cache_contents.get('file_cache', {})
         cached_md5 = file_cache.get(path_to_file)
@@ -77,17 +79,20 @@ class VirtualEnv(object):
         if cached_md5 and cached_md5 == calculated_md5 and skip_cached:
             return
         else:
-            self.run(['pip', 'install', '-r', path_to_file], exit_if_failed=True)
+            self.run(['pip', 'install', '-r', path_to_file], always_exit=always_exit,
+                     exit_if_failed=exit_if_failed, stdin=stdin, stdout=stdout, stderr=stderr)
             file_cache[path_to_file] = calculated_md5
             cache_contents['file_cache'] = file_cache
             self.save_cache_file(cache_contents)
 
-    def install_deps(self, deps, skip_cached=True):
+    def install_deps(self, deps, skip_cached=True, always_exit=False, exit_if_failed=True,
+                     stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr):
         cache_contents = self.load_cache_file()
         cached_deps = cache_contents.get('dep_cache', {})
         deps_to_install = [dep for dep in list(deps) if not (cached_deps.get(dep) and skip_cached)]
         if deps_to_install:
-            self.run(['pip', 'install'] + list(deps), exit_if_failed=True)
+            self.run(['pip', 'install'] + list(deps), always_exit=always_exit,
+                     exit_if_failed=exit_if_failed, stdin=stdin, stdout=stdout, stderr=stderr)
             for dep in deps_to_install:
                 cached_deps[dep] = True
                 cache_contents['dep_cache'] = cached_deps

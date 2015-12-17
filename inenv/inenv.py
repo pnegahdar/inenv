@@ -54,7 +54,7 @@ class InenvManager(object):
             ini_path = os.path.join(directory, ini_name)
             if not os.access(directory, os.W_OK):
                 raise InenvException(
-                    "Lost permissions walkign up to {}. Unable to find {}".format(directory,
+                    "Lost permissions walking up to {}. Unable to find {}".format(directory,
                                                                                   ini_name))
             if os.path.isfile(ini_path):
                 return ini_path
@@ -213,4 +213,3 @@ def toggle_autojump():
             ajfile.write("enabled")
     else:
         os.remove(AUTOJUMP_FILE)
-

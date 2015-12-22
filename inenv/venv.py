@@ -133,6 +133,8 @@ class VirtualEnv(object):
             if process:
                 process.send_signal(signal.SIGINT)
                 exit(process.wait())
+            else:
+                raise
         exit_code = process.wait()
         if always_exit or (exit_if_failed and exit_code != 0):
             sys.exit(exit_code)

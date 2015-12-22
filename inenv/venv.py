@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import os
 import copy
+import signal
 import sys
 
 from virtualenv import create_environment
@@ -121,9 +122,15 @@ class VirtualEnv(object):
         self.deactivate()
 
     def run(self, args, always_exit=False, exit_if_failed=False, stdin=sys.stdin, stdout=sys.stdout,
-            stderr=sys.stderr):
+            stderr=sys.stderr, env=None):
         self.activate()
-        process = subprocess.Popen(args, stdin=stdin, stdout=stdout, stderr=stderr, env=os.environ)
+        env = env or os.environ
+        process = subprocess.Popen(args, stdin=stdin, stdout=stdout, stderr=stderr, env=env)
+        try:
+            process.wait()
+        except KeyboardInterrupt:
+            process.send_signal(signal.SIGINT)
+            exit(process.wait())
         exit_code = process.wait()
         if always_exit or (exit_if_failed and exit_code != 0):
             sys.exit(exit_code)

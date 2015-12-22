@@ -125,12 +125,14 @@ class VirtualEnv(object):
             stderr=sys.stderr, env=None):
         self.activate()
         env = env or os.environ
-        process = subprocess.Popen(args, stdin=stdin, stdout=stdout, stderr=stderr, env=env)
+        process = None
         try:
+            process = subprocess.Popen(args, stdin=stdin, stdout=stdout, stderr=stderr, env=env)
             process.wait()
         except KeyboardInterrupt:
-            process.send_signal(signal.SIGINT)
-            exit(process.wait())
+            if process:
+                process.send_signal(signal.SIGINT)
+                exit(process.wait())
         exit_code = process.wait()
         if always_exit or (exit_if_failed and exit_code != 0):
             sys.exit(exit_code)

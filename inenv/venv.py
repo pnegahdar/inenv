@@ -7,6 +7,7 @@ import copy
 import signal
 import sys
 
+from atomicwrites import atomic_write
 from virtualenv import create_environment
 from virtualenv import path_locations
 
@@ -47,7 +48,7 @@ class VirtualEnv(object):
         return self.content_path('.inenv.cache')
 
     def save_cache_file(self, data):
-        with open(self.cache_file, 'w+') as cache_file:
+        with atomic_write(self.cache_file, overwrite=True) as cache_file:
             json.dump(data, cache_file)
 
     def load_cache_file(self):
@@ -140,4 +141,3 @@ class VirtualEnv(object):
             sys.exit(exit_code)
         self.deactivate()
         return process
-

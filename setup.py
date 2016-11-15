@@ -49,8 +49,9 @@ Simple multi virtualenv command runner
     install_requires=[
         # add your dependencies here
         # remember to use 'package-name>=x.y.z,<x.y+1.0' notation (this way you get bugfixes)
+        'atomicwrites>=1.1.5',
         'click>=4.0',
-        'virtualenv>=13.0.3'
+        'virtualenv>=13.0.3',
     ],
     extras_require={
         'tests': tests_require,

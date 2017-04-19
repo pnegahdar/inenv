@@ -25,6 +25,8 @@ function inenv() {{
     rc=$?
     if [[ $rc == \'{eval_exit_code}\' ]]; then
         source $(inenv_helper extra_source)
+    else
+        return $rc
     fi
 }}
 '''.format(env_var=INENV_ENV_VAR, version=__version__, eval_exit_code=EVAL_EXIT_CODE)

@@ -1,102 +1,106 @@
-# InEnv
+Inenv
+=======
 
-A simple utility to manage multiple virtual python environments and activate them when you need it 
+Inenv is a multi-project virtual enviornment manager, switcher and executor.
 
+### Installation
 
-### Install
+Install inenv in your global python interpreter (make sure no virtualenvs are activated).
 
 ```sh
-$ pip install inenv
+pip install inenv
 ```
 
-### Usage
+### Config file
 
-Create a config file called `inenv.ini` in your project root directory:
+In the root of your project add a file called `inenv.ini`.
 
-```yml
+```ini
 [webproject]
 deps: file:requirements.txt
-    
+
 [service]
 deps: requests==1.4 file:subproject/app/requirements.txt
 root: subproject/app # Optional, used by autojump
+env: PYTHONPATH=dir:projects/search/app B=C
+
+[py3app]
+deps: aiohttp
+python: python3
 ```
 
-Example Usage (in any directory of the project):
+#### Project name
 
-```sh
-# Initialize inenv
-inenv init webproject
-# Note this will tell you to add a file to source in bash, if you want to switch envs in your shell, do this.  
+Each project is denoted by `[project_name]`. This venv contents will be in: `/<projects_root>/.inenv/<project_name>`
 
-# Switches your current env to webproject
-inenv webproject python 
+#### Python
 
-# Autojump 
-inenv autojump # Toggles autojump
- 
-inenv service
-pip freeze
+You can specificy which python to use with the python argument. By default it uses your current python.
 
-# Runs `python manage.py syncdb` in the webproject venv
-# Use posix style -- to pass all args
-inenv webproject -- python manage.py syncdb --hello 
+```ini
+python: python3
 ```
 
-Python Lib
-
-```python
-from inenv.venv import VirtualEnv
-    
-venv = VirtualEnv('webproject', '/User/.virtualenvs')
-venv.create_if_dne()
-venv.delete()
-venv.create_if_dne()
-    
-venv.install_requirements_file('requirements.txt')
-venv.install_deps(['requests==2.0'])
-    
-venv.activate()
-subprocess.check_output(['pip','freeze'])
-venv.deactivate()
-subprocess.check_output(['pip','freeze'])
-    
-venv.run(['pip','freeze'])
-    
-with  VirtualEnv('webproject', '/User/.virtualenvs') as venv:
-    subprocess.check_output('python --version')
-        
-    
-from inenv.inenv import InenvManager
-    
-manager = InenvManager("/project/inenv.ini") # file optional will look for one
-venv = manager.get_prepped_venv('webproject')
-# Same as VirtualEnv above
+```ini
+python: python2
 ```
 
-Fun (don't do this; it's unreliable and dangerous): 
+#### Deps
 
-```python
-from inenv.venv import VirtualEnv
+A project can have py deps. They can be a file (installed via pip install -r <file>) or a specific dep. They are installed in order separately. File paths are relative to the `inenv.ini`
 
-try:
-   import django
-except ImportError:
-   print "couldn't import django"
+#### Root
 
-test_venv = VirtualEnv('test1', '/Users/pnegahdar/.venvs')
-test_venv.create_if_dne()
-test_venv.install_deps(['django==1.7'])
+Root is the root of the project. If root is not set it will be the location of the first file dep and if that is not set it is the directory of the `inenv.ini`
 
-test_venv2 = VirtualEnv('test2', '/Users/pnegahdar/.venvs')
-test_venv2.create_if_dne()
-test_venv2.install_deps(['django==1.8'])
+### Env
 
-with test_venv:
-   import django
-   print django.get_version() # 1.7
+Key/value pairs that are set in the shell/process that is executed. These revert safely. Values can be prefixed with `dir:` to give the full path from the inenv.ini.
 
-with test_venv2:
-   reload(django)
-   print django.get_version() # 1.8
-```
+E.x. if /User/me/projects/django_app/inenv.ini `dir:` is the same as `/User/me/projects/django_app/` So setting something like
+
+    env: PYTHONPATH=dir:subdir/app
+
+Would actually set python path to:
+
+    PYTHONPATH= /User/me/projects/django_app/subdir/app
+
+### Useful commands
+
+Execute something in an inenv without modifying current shell:
+
+    inenv <project_name> -- some command
+
+
+Activating the venv in your current shell:
+
+    inenv <project_name>
+
+
+To toggle autojump (cd into the `root` of the env after activating the venv):
+
+    inenv autojump
+
+Deactivate the venv in your current shell:
+
+    deactivate
+
+
+To install all requirements and setup the venv:
+
+    inenv init <project_name>
+
+To remove and clean out all caches/installs:
+
+    inenv rm <project_name>
+
+
+Get the root of the project venv:
+
+    inenv root <project_name>
+
+
+View currently activated inenv:
+
+    echo $VIRTUALENV
+

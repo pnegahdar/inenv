@@ -1,6 +1,7 @@
 import ConfigParser
-import os
 import sys
+
+import os
 
 from venv import VirtualEnv
 from version import __version__
@@ -82,7 +83,7 @@ class InenvManager(object):
         return venv_sections
 
     def _parse_section(self, section):
-        data = {'deps': [], 'root': '', 'env': {}}
+        data = {'deps': [], 'root': '', 'env': {}, 'python': None}
         # Parse the deps
         try:
             data['deps'] += self.parser.get(section, 'deps').replace(',', ' ').split()
@@ -115,6 +116,12 @@ class InenvManager(object):
                 "Unable to parse ini file env section. Use space separated K{}V pairs.".format(
                     ENV_VAR_DELIMITER))
         data['env'] = env
+
+        try:
+            data['python'] = self.parser.get(section, 'python').strip()
+        except ConfigParser.NoOptionError:
+            pass
+
         return data
 
     @property
@@ -137,7 +144,7 @@ class InenvManager(object):
         venv_info = self.registered_venvs.get(venv_name)
         if not venv_info:
             raise InenvException("Venv {} not in config file {}".format(venv_name, self.ini_path))
-        return VirtualEnv(venv_name, self.venv_dir, addon_env_vars=venv_info['env'])
+        return VirtualEnv(venv_name, self.venv_dir, addon_env_vars=venv_info['env'], python=venv_info['python'])
 
     def _full_relative_path(self, path):
         if os.path.isabs(path):

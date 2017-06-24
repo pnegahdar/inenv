@@ -8,7 +8,6 @@ import signal
 import sys
 
 from atomicwrites import atomic_write
-from virtualenv import create_environment
 from virtualenv import path_locations
 
 
@@ -19,10 +18,11 @@ def file_md5(path):
 class VirtualEnv(object):
     execfile_name = 'activate_this.py'
 
-    def __init__(self, venv_name, venv_dirs, addon_env_vars=None):
+    def __init__(self, venv_name, venv_dirs, addon_env_vars=None, python=None):
         self.venv_name = venv_name
         self.venv_dirs = venv_dirs
         self.sys_prefix = sys.prefix
+        self.python = python
         self.sys_path = copy.copy(sys.path)
         self.original_os_environ = os.environ.copy()
         self.addon_env_vars = addon_env_vars or {}
@@ -58,7 +58,9 @@ class VirtualEnv(object):
             return json.load(cache_file)
 
     def create(self):
-        create_environment(self.path)
+        base_args = ['-p', self.python] if self.python else []
+        args = ['virtualenv'] + base_args + [self.path]
+        subprocess.check_output(args)
 
     @property
     def exists(self):
@@ -104,31 +106,15 @@ class VirtualEnv(object):
     def activate_shell_file(self):
         return self.content_path(self.bin_dir, 'activate')
 
-    def activate(self):
-        if not self.exists:
-            self.create()
-        if self.addon_env_vars:
-            os.environ = dict(self.original_os_environ.items() + self.addon_env_vars.items())
-        execfile(self.execfile_path, dict(__file__=self.execfile_path))
-
-    def deactivate(self):
-        sys.path = self.sys_path
-        sys.prefix = self.sys_prefix
-        os.environ = self.original_os_environ
-
-    def __enter__(self):
-        self.activate()
-
-    def __exit__(self, *exc_info):
-        self.deactivate()
-
     def run(self, args, always_exit=False, exit_if_failed=False, stdin=sys.stdin, stdout=sys.stdout,
             stderr=sys.stderr, env=None):
-        self.activate()
-        env = env or os.environ
+        if not self.exists:
+            self.create()
+        cmd = ['sh', '-c', "source {} && exec {}".format(self.activate_shell_file, ' '.join(args))]
+        env = env or dict(self.original_os_environ.items() + self.addon_env_vars.items())
         process = None
         try:
-            process = subprocess.Popen(args, stdin=stdin, stdout=stdout, stderr=stderr, env=env)
+            process = subprocess.Popen(cmd, stdin=stdin, stdout=stdout, stderr=stderr, env=env)
             process.wait()
         except KeyboardInterrupt:
             if process:
@@ -139,5 +125,4 @@ class VirtualEnv(object):
         exit_code = process.wait()
         if always_exit or (exit_if_failed and exit_code != 0):
             sys.exit(exit_code)
-        self.deactivate()
         return process

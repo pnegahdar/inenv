@@ -110,7 +110,7 @@ class VirtualEnv(object):
             stderr=sys.stderr, env=None):
         if not self.exists:
             self.create()
-        cmd = ['sh', '-c', "source {} && exec {}".format(self.activate_shell_file, ' '.join(args))]
+        cmd = ['sh', '-c', ". {} && exec {}".format(self.activate_shell_file, ' '.join(args))]
         env = env or dict(self.original_os_environ.items() + self.addon_env_vars.items())
         process = None
         try:

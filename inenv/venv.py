@@ -18,7 +18,7 @@ def file_md5(path):
 class VirtualEnv(object):
     execfile_name = 'activate_this.py'
 
-    def __init__(self, venv_name, venv_dirs, addon_env_vars=None, python=None):
+    def __init__(self, venv_name, venv_dirs, addon_env_vars=None, python=None, venv_hash=None):
         self.venv_name = venv_name
         self.venv_dirs = venv_dirs
         self.sys_prefix = sys.prefix
@@ -26,6 +26,7 @@ class VirtualEnv(object):
         self.sys_path = copy.copy(sys.path)
         self.original_os_environ = os.environ.copy()
         self.addon_env_vars = addon_env_vars or {}
+        self.venv_hash = venv_hash
 
 
     @property
@@ -61,6 +62,9 @@ class VirtualEnv(object):
         base_args = ['-p', self.python] if self.python else []
         args = ['virtualenv'] + base_args + [self.path]
         subprocess.check_output(args)
+        cache_contents = self.load_cache_file()
+        cache_contents['venv_hash'] = self.venv_hash
+        self.save_cache_file(cache_contents)
 
     @property
     def exists(self):
@@ -72,6 +76,24 @@ class VirtualEnv(object):
 
     def delete(self):
         shutil.rmtree(self.path)
+
+    def rebuild_if_hash_changed(self):
+        cache_contents = self.load_cache_file()
+        if cache_contents.get('venv_hash') != self.venv_hash:
+            # Reset other caches
+            sys.stderr.write("Rebuilding due to hash change...\n")
+            cache_contents = {'venv_hash': self.venv_hash}
+            self.delete()
+            self.create()
+            self.save_cache_file(cache_contents)
+            return True
+        return False
+
+    def prep(self):
+        if not self.exists:
+            self.create()
+        else:
+            self.rebuild_if_hash_changed()
 
     def install_requirements_file(self, path_to_file, skip_cached=True, always_exit=False,
                                   exit_if_failed=True, stdin=sys.stdin, stdout=sys.stdout,
@@ -108,8 +130,7 @@ class VirtualEnv(object):
 
     def run(self, args, always_exit=False, exit_if_failed=False, stdin=sys.stdin, stdout=sys.stdout,
             stderr=sys.stderr, env=None):
-        if not self.exists:
-            self.create()
+        self.prep()
         cmd = ['sh', '-c', ". {} && exec {}".format(self.activate_shell_file, ' '.join(args))]
         env = env or dict(self.original_os_environ.items() + self.addon_env_vars.items())
         process = None

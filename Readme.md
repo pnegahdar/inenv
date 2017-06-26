@@ -53,7 +53,7 @@ A project can have py deps. They can be a file (installed via pip install -r <fi
 
 Root is the root of the project. If root is not set it will be the location of the first file dep and if that is not set it is the directory of the `inenv.ini`
 
-### Env
+#### Env
 
 Key/value pairs that are set in the shell/process that is executed. These revert safely. Values can be prefixed with `dir:` to give the full path from the inenv.ini.
 
@@ -64,6 +64,16 @@ E.x. if /User/me/projects/django_app/inenv.ini `dir:` is the same as `/User/me/p
 Would actually set python path to:
 
     PYTHONPATH= /User/me/projects/django_app/subdir/app
+
+#### Hash
+
+Sometimes you want to force the virtualenv to rebuild on all environments its run on. To do this you can set a hash for the venv:
+
+```ini
+hash: rev1
+```
+
+Going forward everytime you change the hash the venv will be rebuilt whenever an inenv command is run.
 
 ### Useful commands
 

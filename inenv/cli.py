@@ -154,13 +154,13 @@ def autojump():
 def extra_source():
     """Path to file sourced after an inenv switch"""
     inenv = InenvManager()
-    print inenv.extra_source_file
+    print(inenv.extra_source_file)
 
 
 @main_cli.command('version')
 def print_version():
     """Print the inenv version"""
-    print version.__version__
+    print(version.__version__)
 
 
 def run_cli():

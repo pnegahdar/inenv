@@ -11,21 +11,13 @@ from atomicwrites import atomic_write
 from virtualenv import path_locations
 
 
-def file_md5(path):
-    return hashlib.md5(open(path, 'rb').read()).hexdigest()
-
-
 class VirtualEnv(object):
     execfile_name = 'activate_this.py'
 
     def __init__(self, venv_name, venv_dirs, addon_env_vars=None, python=None, venv_hash=None):
         self.venv_name = venv_name
         self.venv_dirs = venv_dirs
-        self.sys_prefix = sys.prefix
         self.python = python
-        self.sys_path = copy.copy(sys.path)
-        self.original_os_environ = os.environ.copy()
-        self.addon_env_vars = addon_env_vars or {}
         self.venv_hash = venv_hash
 
 
@@ -45,55 +37,12 @@ class VirtualEnv(object):
         return self.content_path(self.bin_dir, self.execfile_name)
 
     @property
-    def cache_file(self):
-        return self.content_path('.inenv.cache')
-
-    def save_cache_file(self, data):
-        with atomic_write(self.cache_file, overwrite=True) as cache_file:
-            json.dump(data, cache_file)
-
-    def load_cache_file(self):
-        if not os.path.isfile(self.cache_file):
-            return {}
-        with open(self.cache_file) as cache_file:
-            return json.load(cache_file)
-
-    def create(self):
-        base_args = ['-p', self.python] if self.python else []
-        args = ['virtualenv'] + base_args + [self.path]
-        subprocess.check_output(args)
-        cache_contents = self.load_cache_file()
-        cache_contents['venv_hash'] = self.venv_hash
-        self.save_cache_file(cache_contents)
+    def activate_shell_file(self):
+        return self.content_path(self.bin_dir, 'activate')
 
     @property
     def exists(self):
         return os.path.isfile(self.execfile_path)
-
-    def create_if_dne(self):
-        if not self.exists:
-            self.create()
-
-    def delete(self):
-        shutil.rmtree(self.path)
-
-    def rebuild_if_hash_changed(self):
-        cache_contents = self.load_cache_file()
-        if cache_contents.get('venv_hash') != self.venv_hash:
-            # Reset other caches
-            sys.stderr.write("Rebuilding due to hash change...\n")
-            cache_contents = {'venv_hash': self.venv_hash}
-            self.delete()
-            self.create()
-            self.save_cache_file(cache_contents)
-            return True
-        return False
-
-    def prep(self):
-        if not self.exists:
-            self.create()
-        else:
-            self.rebuild_if_hash_changed()
 
     def install_requirements_file(self, path_to_file, skip_cached=True, always_exit=False,
                                   exit_if_failed=True, stdin=sys.stdin, stdout=sys.stdout,
@@ -124,9 +73,6 @@ class VirtualEnv(object):
                 cache_contents['dep_cache'] = cached_deps
         self.save_cache_file(cache_contents)
 
-    @property
-    def activate_shell_file(self):
-        return self.content_path(self.bin_dir, 'activate')
 
     def run(self, args, always_exit=False, exit_if_failed=False, stdin=sys.stdin, stdout=sys.stdout,
             stderr=sys.stderr, env=None):

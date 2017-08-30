@@ -1,0 +1,11 @@
+[test1]
+env = { YO = "LO" }
+root = "app/"
+
+    [test1.python]
+    python = 'python36'
+    deps = ['requests==4.0', 'requirements.txt']
+
+    [test1.nvm]
+    version = "7.0.3"
+

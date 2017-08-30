@@ -51,7 +51,8 @@ Simple multi virtualenv command runner
         # remember to use 'package-name>=x.y.z,<x.y+1.0' notation (this way you get bugfixes)
         'atomicwrites>=1.1.5',
         'click>=4.0',
-        'virtualenv>=13.0.3',
+        'schematics>=2.0.1',
+        'pytoml>=0.1.14'
     ],
     extras_require={
         'tests': tests_require,

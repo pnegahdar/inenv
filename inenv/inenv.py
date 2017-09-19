@@ -1,10 +1,13 @@
-import ConfigParser
+try:
+    import ConfigParser
+except ImportError:
+    import configparser as ConfigParser
 import sys
 
 import os
 
-from venv import VirtualEnv
-from version import __version__
+from .venv import VirtualEnv
+from .version import __version__
 
 
 class InenvException(Exception):

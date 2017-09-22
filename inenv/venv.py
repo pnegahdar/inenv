@@ -132,7 +132,9 @@ class VirtualEnv(object):
             stderr=sys.stderr, env=None):
         self.prep()
         cmd = ['sh', '-c', ". {} && exec {}".format(self.activate_shell_file, ' '.join(args))]
-        env = env or dict(self.original_os_environ.items() + self.addon_env_vars.items())
+        if env is None:
+            env = self.original_os_environ.copy()
+            env.update(self.addon_env_vars)
         process = None
         try:
             process = subprocess.Popen(cmd, stdin=stdin, stdout=stdout, stderr=stderr, env=env)

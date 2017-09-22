@@ -5,10 +5,10 @@ import sys
 
 import click
 
-from inenv import (InenvManager, INENV_ENV_VAR, EVAL_EXIT_CODE, InenvException,
-                   autojump_enabled, toggle_autojump)
-from utils import override_envars_and_deactivate
-import version
+from .inenv import (InenvManager, INENV_ENV_VAR, EVAL_EXIT_CODE, InenvException,
+                    autojump_enabled, toggle_autojump)
+from .utils import override_envars_and_deactivate
+from . import version
 
 
 def activator_warn(inenv):

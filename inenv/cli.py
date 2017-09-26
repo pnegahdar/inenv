@@ -12,8 +12,8 @@ from . import version
 
 
 def activator_warn(inenv):
-    click.echo(click.style("Please add the following to your bash RC for auto switch.", fg='red'))
-    click.echo(click.style("source {file}".format(file=inenv.activate_file), fg='green'))
+    click.secho("Please add the following to your bash RC for auto switch.", fg='red')
+    click.secho("source {file}".format(file=inenv.activate_file), fg='green')
 
 
 class InenvCliGroup(click.Group):
@@ -102,9 +102,9 @@ def switch_or_run(cmd, venv_name=None):
         inenv.write_extra_source_file("source {}".format(venv.activate_shell_file))
         inenv.write_extra_source_file(override_envars_and_deactivate(inenv.get_envvars(venv_name)))
         if autojump_enabled():
-            dir = inenv.guess_contents_dir(venv_name)
-            inenv.write_extra_source_file('cd {}'.format(dir))
-            click.echo(click.style("Jumping to {}".format(dir), fg='green'))
+            directory = inenv.guess_contents_dir(venv_name)
+            inenv.write_extra_source_file('cd {}'.format(directory))
+            click.secho("Jumping to {}".format(directory), fg='green')
         sys.exit(EVAL_EXIT_CODE)
 
 
@@ -125,7 +125,7 @@ def root(venv_name):
     inenv = InenvManager()
     inenv.get_venv(venv_name)
     venv = inenv.registered_venvs[venv_name]
-    click.echo(venv['root'])
+    click.secho(venv['root'])
 
 
 @click.argument('venv_name')
@@ -136,7 +136,7 @@ def init(venv_name):
     inenv.get_prepped_venv(venv_name, skip_cached=False)
     if not os.getenv(INENV_ENV_VAR):
         activator_warn(inenv)
-    click.echo(click.style("Your venv is ready. Enjoy!", fg='green'))
+    click.secho("Your venv is ready. Enjoy!", fg='green')
 
 
 @main_cli.command()
@@ -145,22 +145,22 @@ def autojump():
     currently_enabled = autojump_enabled()
     toggle_autojump()
     if not currently_enabled:
-        click.echo(click.style("Autojump enabled", fg='green'))
+        click.secho("Autojump enabled", fg='green')
     else:
-        click.echo(click.style("Autojump disabled", fg='red'))
+        click.secho("Autojump disabled", fg='red')
 
 
 @main_cli.command()
 def extra_source():
     """Path to file sourced after an inenv switch"""
     inenv = InenvManager()
-    print(inenv.extra_source_file)
+    click.secho(inenv.extra_source_file)
 
 
 @main_cli.command('version')
 def print_version():
     """Print the inenv version"""
-    print(version.__version__)
+    click.secho(version.__version__)
 
 
 def run_cli():
@@ -174,7 +174,7 @@ def run_cli():
             main_cli.add_command(new_switch, name=venv, sort_later=True)
         main_cli(obj={}, prog_name="inenv")
     except InenvException as e:
-        click.echo(click.style("{}".format(e.message), fg='red'))
+        click.secho("{}".format(e.message), fg='red')
 
 
 if __name__ == '__main__':

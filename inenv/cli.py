@@ -20,9 +20,9 @@ class InenvCliGroup(click.Group):
     sort_later = set()
 
     def get_command(self, ctx, cmd_name):
-        rv = click.Group.get_command(self, ctx, cmd_name)
-        if rv is not None:
-            return rv
+        cmd = click.Group.get_command(self, ctx, cmd_name)
+        if cmd is not None:
+            return cmd
         matches = [x for x in self.list_commands(ctx)
                    if x.startswith(cmd_name)]
         if not matches:
@@ -38,11 +38,11 @@ class InenvCliGroup(click.Group):
 
     def list_commands(self, ctx):
         core_commands, sort_later_commands = [], []
-        for k, v in self.commands.items():
-            if k in self.sort_later:
-                sort_later_commands.append(k)
+        for key in self.commands:
+            if key in self.sort_later:
+                sort_later_commands.append(key)
             else:
-                core_commands.append(k)
+                core_commands.append(key)
         return sorted(core_commands) + sorted(sort_later_commands)
 
     def format_commands(self, ctx, formatter):
@@ -56,11 +56,11 @@ class InenvCliGroup(click.Group):
             if cmd is None:
                 continue
 
-            help = cmd.short_help or ''
+            help_ = cmd.short_help or ''
             if subcommand in self.sort_later:
-                inenv_commands.append((subcommand, help))
+                inenv_commands.append((subcommand, help_))
             else:
-                core_commands.append((subcommand, help))
+                core_commands.append((subcommand, help_))
 
         if core_commands:
             with formatter.section('Commands'):
@@ -121,7 +121,7 @@ def rm(venv_name):
 @click.argument('venv_name')
 @main_cli.command()
 def root(venv_name):
-    """ Removes the venv by name """
+    """Print the root directory of a virtualenv"""
     inenv = InenvManager()
     inenv.get_venv(venv_name)
     venv = inenv.registered_venvs[venv_name]
@@ -166,15 +166,15 @@ def print_version():
 def run_cli():
     try:
         inenv = InenvManager()
-        for venv in inenv.registered_venvs.keys():
+        for venv in inenv.registered_venvs:
             new_switch = copy.deepcopy(switch_or_run)
             for param in new_switch.params:
                 if param.name == 'venv_name':
                     param.default = venv
             main_cli.add_command(new_switch, name=venv, sort_later=True)
         main_cli(obj={}, prog_name="inenv")
-    except InenvException as e:
-        click.secho("{}".format(e.message), fg='red')
+    except InenvException as exc:
+        click.secho("{}".format(exc.message), fg='red')
 
 
 if __name__ == '__main__':

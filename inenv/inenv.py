@@ -55,8 +55,8 @@ class InenvManager(object):
     @staticmethod
     def find_closest_ini(start_dir=None, ini_name=INI_NAME):
         directory = start_dir or os.path.realpath(os.path.curdir)
-        x = RECURSION_LIMIT
-        while x > 0:
+        recurses_left = RECURSION_LIMIT
+        while recurses_left > 0:
             ini_path = os.path.join(directory, ini_name)
             if not os.access(directory, os.W_OK):
                 raise InenvException(
@@ -70,7 +70,7 @@ class InenvManager(object):
                     "Walked all the way up to {} and was unable to find {}".format(parent_dir,
                                                                                    INI_NAME))
             directory = parent_dir
-            x -= 1
+            recurses_left -= 1
         raise InenvException("Recursion limit exceeded unable to find inenv.ini")
 
     def _parse_ini(self):
@@ -108,10 +108,10 @@ class InenvManager(object):
             env = dict([each.split(ENV_VAR_DELIMITER) for each in
                         self.parser.get(section, 'env').replace(',', '').split()])
             # Correct relative paths
-            for k, v in env.items():
-                if v.startswith(FILE_PREFIX) or v.startswith(DIR_PREFIX):
-                    env[k] = self._full_relative_path(
-                        v.replace(FILE_PREFIX, '').replace(DIR_PREFIX, ''))
+            for key, value in env.items():
+                if value.startswith(FILE_PREFIX) or value.startswith(DIR_PREFIX):
+                    env[key] = self._full_relative_path(
+                        value.replace(FILE_PREFIX, '').replace(DIR_PREFIX, ''))
         except ConfigParser.NoOptionError:
             env = {}
         except ValueError:
@@ -133,15 +133,15 @@ class InenvManager(object):
 
     @property
     def venv_dir(self):
-        dir = os.path.join(os.path.dirname(self.ini_path), ".inenv/")
-        if not os.path.exists(dir):
-            os.makedirs(dir)
-        return dir
+        directory = os.path.join(os.path.dirname(self.ini_path), ".inenv/")
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        return directory
 
     def _fix_venv_name_input(self, venv_name):
         if venv_name in self.registered_venvs:
             return venv_name
-        is_prefix_of = [key for key in self.registered_venvs.keys() if key.startswith('venv_name')]
+        is_prefix_of = [key for key in self.registered_venvs if key.startswith('venv_name')]
         if is_prefix_of and len(is_prefix_of) == 1:
             return is_prefix_of[0]
         return venv_name
@@ -151,7 +151,9 @@ class InenvManager(object):
         venv_info = self.registered_venvs.get(venv_name)
         if not venv_info:
             raise InenvException("Venv {} not in config file {}".format(venv_name, self.ini_path))
-        return VirtualEnv(venv_name, self.venv_dir, addon_env_vars=venv_info['env'], python=venv_info['python'],
+        return VirtualEnv(venv_name, self.venv_dir,
+                          addon_env_vars=venv_info['env'],
+                          python=venv_info['python'],
                           venv_hash=venv_info['hash'])
 
     def _full_relative_path(self, path):
@@ -166,7 +168,7 @@ class InenvManager(object):
         """
         config = self.registered_venvs[virtualenv.venv_name]
         configed_deps = config['deps']
-        for i, dep in enumerate(configed_deps):
+        for dep in configed_deps:
             if dep.startswith(FILE_PREFIX):
                 dep = self._full_relative_path(dep.replace(FILE_PREFIX, ''))
                 virtualenv.install_requirements_file(dep, skip_cached=skip_cached,
@@ -204,9 +206,9 @@ class InenvManager(object):
     def extra_source_file(self):
         return os.path.join(self.venv_dir, EXTRA_SOURCE_NAME)
 
-    def setup_activator(self, only_if_dne=False):
+    def setup_activator(self):
         exists = os.path.isfile(self.activate_file)
-        if not only_if_dne or not exists:
+        if not exists:
             with open(self.activate_file, 'w+') as writefile:
                 writefile.write(ACTIVATE_TEMPLATE)
 

@@ -11,17 +11,6 @@
 from setuptools import setup, find_packages
 from inenv.version import __version__
 
-tests_require = [
-    'mock',
-    'nose',
-    'coverage',
-    'yanc',
-    'preggy',
-    'tox',
-    'ipdb',
-    'coveralls',
-    'sphinx',
-]
 
 setup(
     name='inenv',
@@ -30,7 +19,7 @@ setup(
     long_description='''
 Simple multi virtualenv command runner
 ''',
-    keywords='venv virtualenv python tox test multivenv',
+    keywords='venv virtualenv python multivenv',
     author='Parham Negahdar',
     author_email='pnegahdar@gmail.com',
     url='https://github.com/pnegahdar/inenv',
@@ -51,15 +40,20 @@ Simple multi virtualenv command runner
     packages=find_packages(),
     include_package_data=False,
     install_requires=[
-        # add your dependencies here
-        # remember to use 'package-name>=x.y.z,<x.y+1.0' notation (this way you get bugfixes)
         'atomicwrites>=1.1.5',
         'click>=4.0',
         'virtualenv>=13.0.3',
     ],
-    extras_require={
-        'tests': tests_require,
-    },
+    setup_requires=[
+        'pytest-runner',
+        'pytest-pylint',
+        ],
+    tests_require=[
+        'pytest',
+        'pytest-cov',
+        'pylint',
+        "mock; python_version < '3.4'",
+    ],
     entry_points={
         'console_scripts': [
             # add cli scripts here in this form:

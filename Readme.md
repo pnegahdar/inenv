@@ -116,7 +116,7 @@ View currently activated inenv:
 
     echo $VIRTUALENV
 
-.. |Build Status| image:: https://travis-ci.org/ColCarroll/inenv.png?branch=master
-   :target: https://travis-ci.org/ColCarroll/inenv
-.. |Coverage| image:: https://coveralls.io/repos/github/ColCarroll/inenv/badge.svg?branch=master
-  :target: https://coveralls.io/github/ColCarroll/inenv?branch=master
+.. |Build Status| image:: https://travis-ci.org/pnegahdar/inenv.png?branch=master
+   :target: https://travis-ci.org/pnegahdar/inenv
+.. |Coverage| image:: https://coveralls.io/repos/github/pnegahdar/inenv/badge.svg?branch=master
+  :target: https://coveralls.io/github/pnegahdar/inenv?branch=master

@@ -1,4 +1,5 @@
-|Build Status| |Coverage|
+[![Build Status](https://travis-ci.org/pnegahdar/inenv.svg?branch=master)](https://travis-ci.org/pnegahdar/inenv)
+[![Coverage Status](https://coveralls.io/repos/github/pnegahdar/inenv/badge.svg?branch=master)](https://coveralls.io/github/pnegahdar/inenv?branch=master)
 
 Inenv
 =======
@@ -115,8 +116,3 @@ Get the root of the project venv:
 View currently activated inenv:
 
     echo $VIRTUALENV
-
-.. |Build Status| image:: https://travis-ci.org/pnegahdar/inenv.png?branch=master
-   :target: https://travis-ci.org/pnegahdar/inenv
-.. |Coverage| image:: https://coveralls.io/repos/github/pnegahdar/inenv/badge.svg?branch=master
-  :target: https://coveralls.io/github/pnegahdar/inenv?branch=master

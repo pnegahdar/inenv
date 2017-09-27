@@ -1,3 +1,5 @@
+|Build Status| |Coverage|
+
 Inenv
 =======
 
@@ -114,3 +116,7 @@ View currently activated inenv:
 
     echo $VIRTUALENV
 
+.. |Build Status| image:: https://travis-ci.org/ColCarroll/inenv.png?branch=master
+   :target: https://travis-ci.org/ColCarroll/inenv
+.. |Coverage| image:: https://coveralls.io/repos/github/ColCarroll/inenv/badge.svg?branch=master
+  :target: https://coveralls.io/github/ColCarroll/inenv?branch=master

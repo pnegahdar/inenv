@@ -6,17 +6,11 @@
 # Copyright (c) 2015, Parham Negahdar <pnegahdar@gmail.com>
 
 [run]
-omit =
-    *tests.py
 branch = True
-source =
-    inenv
+source = inenv
 
 [report]
 exclude_lines =
-    pragma: no cover
     def __repr__
     raise NotImplementedError
     if __name__ == .__main__.:
-    from urllib.parse import parse_qs
-    except ImportError:

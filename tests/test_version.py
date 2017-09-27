@@ -8,12 +8,9 @@
 # http://www.opensource.org/licenses/MIT-license
 # Copyright (c) 2015, Parham Negahdar <pnegahdar@gmail.com>
 
-from preggy import expect
-
+import pkg_resources
 from inenv.version import __version__
-from tests.base import TestCase
 
 
-class VersionTestCase(TestCase):
-    def test_has_proper_version(self):
-        expect(__version__).to_equal('1.0.4')
+def test_has_proper_version():
+    assert __version__ == pkg_resources.get_distribution("inenv").version

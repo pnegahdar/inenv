@@ -14,8 +14,12 @@ python:
 
 install:
     # install python requirements
-    - make setup
+    - python setup.py install
+    - pip install coveralls
 
 script:
     # run tests
-    - make test
+    - python setup.py test
+
+after_success:
+    - coveralls

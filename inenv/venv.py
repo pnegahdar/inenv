@@ -28,7 +28,6 @@ class VirtualEnv(object):
         self.addon_env_vars = addon_env_vars or {}
         self.venv_hash = venv_hash
 
-
     @property
     def path(self):
         return os.path.join(self.venv_dirs, self.venv_name)
@@ -76,6 +75,12 @@ class VirtualEnv(object):
 
     def delete(self):
         shutil.rmtree(self.path)
+
+    def __enter__(self):
+        self.create_if_dne()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.delete()
 
     def rebuild_if_hash_changed(self):
         cache_contents = self.load_cache_file()
@@ -132,7 +137,9 @@ class VirtualEnv(object):
             stderr=sys.stderr, env=None):
         self.prep()
         cmd = ['sh', '-c', ". {} && exec {}".format(self.activate_shell_file, ' '.join(args))]
-        env = env or dict(self.original_os_environ.items() + self.addon_env_vars.items())
+        if env is None:
+            env = self.original_os_environ.copy()
+            env.update(self.addon_env_vars)
         process = None
         try:
             process = subprocess.Popen(cmd, stdin=stdin, stdout=stdout, stderr=stderr, env=env)

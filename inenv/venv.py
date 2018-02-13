@@ -114,6 +114,8 @@ class VirtualEnv(object):
                      exit_if_failed=exit_if_failed, stdin=stdin, stdout=stdout, stderr=stderr)
             file_cache[path_to_file] = calculated_md5
             cache_contents['file_cache'] = file_cache
+            if self.venv_hash:
+                cache_contents['venv_hash'] = self.venv_hash
             self.save_cache_file(cache_contents)
 
     def install_deps(self, deps, skip_cached=True, always_exit=False, exit_if_failed=True,

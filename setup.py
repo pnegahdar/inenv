@@ -42,7 +42,7 @@ Simple multi virtualenv command runner
     install_requires=[
         'atomicwrites>=1.1.5',
         'click>=4.0',
-        'virtualenv>=13.0.3',
+        'virtualenv>=13.0.3,<20.0.0',
     ],
     setup_requires=[
         'pytest-runner',
